@@ -78,7 +78,7 @@ async function saveToFirestore() {
         notes: notesArea ? notesArea.value : "",
         updatedAt: Date.now(),
       }),
-      6000
+      3000
     );
     if (syncNote) syncNote.hidden = true;
   } catch (e) {
@@ -98,7 +98,7 @@ function withTimeout(promise, ms) {
 }
 
 async function loadFromFirestore(uid) {
-  const snap = await withTimeout(getDoc(doc(db, "users", uid)), 6000);
+  const snap = await withTimeout(getDoc(doc(db, "users", uid)), 3000);
   if (snap.exists()) {
     const data = snap.data();
     tasks = data.tasks || [];
@@ -568,6 +568,7 @@ setupWorklist();
 setupAuth();
 
 onAuthStateChanged(auth, async (user) => {
+  console.log("[할일장] onAuthStateChanged 실행됨, user:", user ? user.email : null);
   const overlay = document.getElementById("authOverlay");
   const appRoot = document.getElementById("appRoot");
 
@@ -577,10 +578,12 @@ onAuthStateChanged(auth, async (user) => {
 
     let notes = "";
     let syncWarning = "";
+    console.log("[할일장] Firestore 데이터 불러오기 시작");
     try {
       notes = await loadFromFirestore(user.uid);
+      console.log("[할일장] Firestore 데이터 불러오기 성공");
     } catch (e) {
-      console.error("데이터 불러오기 실패:", e);
+      console.error("[할일장] 데이터 불러오기 실패:", e);
       syncWarning =
         "저장 서버 연결이 막혀 있어요. 광고 차단 확장 프로그램을 꺼주세요.";
     }
@@ -597,6 +600,7 @@ onAuthStateChanged(auth, async (user) => {
     render();
     renderWorklist();
 
+    console.log("[할일장] 화면 전환 실행");
     overlay.hidden = true;
     appRoot.hidden = false;
   } else {
