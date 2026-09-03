@@ -39,6 +39,11 @@ body {
   margin: 0 auto;
 }
 
+.auth-overlay[hidden],
+.app[hidden] {
+  display: none;
+}
+
 .auth-overlay {
   position: fixed;
   inset: 0;
