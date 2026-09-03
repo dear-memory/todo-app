@@ -71,12 +71,15 @@ async function saveToFirestore() {
   const notesArea = document.getElementById("notesArea");
   const syncNote = document.getElementById("syncNote");
   try {
-    await setDoc(doc(db, "users", currentUser.uid), {
-      tasks,
-      worklist,
-      notes: notesArea ? notesArea.value : "",
-      updatedAt: Date.now(),
-    });
+    await withTimeout(
+      setDoc(doc(db, "users", currentUser.uid), {
+        tasks,
+        worklist,
+        notes: notesArea ? notesArea.value : "",
+        updatedAt: Date.now(),
+      }),
+      6000
+    );
     if (syncNote) syncNote.hidden = true;
   } catch (e) {
     console.error("저장 실패:", e);
@@ -87,8 +90,15 @@ async function saveToFirestore() {
   }
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
 async function loadFromFirestore(uid) {
-  const snap = await getDoc(doc(db, "users", uid));
+  const snap = await withTimeout(getDoc(doc(db, "users", uid)), 6000);
   if (snap.exists()) {
     const data = snap.data();
     tasks = data.tasks || [];
