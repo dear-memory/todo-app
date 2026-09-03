@@ -90,6 +90,8 @@ function shiftDate(days) {
   render();
 }
 
+let expandedIds = new Set();
+
 function render() {
   const container = document.getElementById("listSections");
   const emptyState = document.getElementById("emptyState");
@@ -123,7 +125,7 @@ function render() {
     section.appendChild(label);
 
     for (const task of list) {
-      section.appendChild(renderTaskRow(task));
+      section.appendChild(renderTaskItem(task));
     }
     container.appendChild(section);
   }
@@ -141,7 +143,30 @@ function render() {
   }
 }
 
-function renderTaskRow(task) {
+function renderTaskItem(task) {
+  const wrapper = document.createElement("div");
+  const isExpanded = expandedIds.has(task.id);
+
+  wrapper.appendChild(renderTaskRow(task, isExpanded));
+
+  if (isExpanded) {
+    const detail = document.createElement("div");
+    detail.className = "task-detail";
+    const textarea = document.createElement("textarea");
+    textarea.placeholder = "세부 내용을 적어보세요.";
+    textarea.value = task.detail || "";
+    textarea.addEventListener("input", () => {
+      task.detail = textarea.value;
+      saveTasks();
+    });
+    detail.appendChild(textarea);
+    wrapper.appendChild(detail);
+  }
+
+  return wrapper;
+}
+
+function renderTaskRow(task, isExpanded) {
   const row = document.createElement("div");
   row.className = "task-row";
 
@@ -153,15 +178,22 @@ function renderTaskRow(task) {
   const checkbox = document.createElement("button");
   checkbox.type = "button";
   checkbox.className = "checkbox" + (task.done ? " done" : "");
+  checkbox.setAttribute("aria-label", task.done ? "완료 취소" : "완료 처리");
   checkbox.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
   checkbox.addEventListener("click", () => toggleDone(task.id));
   row.appendChild(checkbox);
 
   const title = document.createElement("span");
-  title.className = "task-title" + (task.done ? " done" : "");
+  title.className = "task-title task-title-clickable" + (task.done ? " done" : "");
   title.textContent = task.title;
-  title.addEventListener("click", () => toggleDone(task.id));
+  title.addEventListener("click", () => toggleExpanded(task.id));
   row.appendChild(title);
+
+  const chevron = document.createElement("span");
+  chevron.className = "task-chevron" + (isExpanded ? " expanded" : "");
+  chevron.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+  chevron.addEventListener("click", () => toggleExpanded(task.id));
+  row.appendChild(chevron);
 
   const tag = document.createElement("span");
   tag.className = "task-tag";
@@ -179,6 +211,15 @@ function renderTaskRow(task) {
   row.appendChild(del);
 
   return row;
+}
+
+function toggleExpanded(id) {
+  if (expandedIds.has(id)) {
+    expandedIds.delete(id);
+  } else {
+    expandedIds.add(id);
+  }
+  render();
 }
 
 function toggleDone(id) {

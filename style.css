@@ -270,6 +270,51 @@ nav {
   white-space: nowrap;
 }
 
+.task-title-clickable:hover {
+  color: var(--moss-dark);
+}
+
+.task-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.task-chevron .icon { width: 14px; height: 14px; }
+.task-chevron.expanded { transform: rotate(180deg); color: var(--ink-soft); }
+
+.task-detail {
+  padding: 0 0 14px 81px;
+  border-bottom: 1px solid var(--line);
+  margin-top: -1px;
+}
+
+.task-detail textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-card);
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  resize: vertical;
+}
+
+.task-detail textarea:focus {
+  outline: none;
+  border-color: var(--moss);
+  box-shadow: 0 0 0 2px var(--moss-tint);
+}
+
 .task-delete {
   border: none;
   background: transparent;
