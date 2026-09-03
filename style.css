@@ -200,6 +200,15 @@ nav {
   border-bottom: 1px solid var(--line);
 }
 
+.worklist-row .task-delete {
+  visibility: visible;
+  opacity: 0.5;
+}
+
+.worklist-row .task-delete:hover {
+  opacity: 1;
+}
+
 .time-group { margin-bottom: 1.5rem; }
 
 .time-group-label {
