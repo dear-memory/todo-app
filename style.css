@@ -1,15 +1,15 @@
 :root {
-  --paper: #eae4d3;
-  --paper-card: #f4f0e4;
-  --ink: #2b2a25;
-  --ink-soft: #6b6a5f;
-  --ink-faint: #9a9887;
-  --line: #d8d2bf;
-  --line-strong: #b7b092;
+  --paper: #ffffff;
+  --paper-card: #f7f7f5;
+  --ink: #1c1c1a;
+  --ink-soft: #55544e;
+  --ink-faint: #8a897f;
+  --line: #e6e4de;
+  --line-strong: #c7c5bb;
   --moss: #3d5a45;
   --moss-dark: #294031;
-  --moss-tint: #dfe8e0;
-  --done-bg: #cfe0d3;
+  --moss-tint: #e3ede6;
+  --done-bg: #d7e6da;
 
   --work: #33507e;
   --work-bg: #dde4f0;
@@ -104,6 +104,102 @@ nav {
   margin: 0 0 1.75rem;
 }
 
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.date-nav-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper-card);
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.date-nav-btn:hover { background: var(--line); }
+.date-nav-btn .icon { width: 15px; height: 15px; }
+
+.date-nav-center {
+  position: relative;
+  flex: 1;
+}
+
+.date-picker {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+
+.today-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-card);
+  color: var(--ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.today-btn:hover { background: var(--line); color: var(--ink); }
+
+.worklist-form {
+  display: flex;
+  gap: 8px;
+  margin: 1.25rem 0 6px;
+}
+
+.worklist-form input {
+  flex: 1;
+  padding: 9px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-card);
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.worklist-form input:focus {
+  outline: none;
+  border-color: var(--moss);
+  box-shadow: 0 0 0 2px var(--moss-tint);
+}
+
+.worklist-form button {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--moss);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.worklist-form button:hover { background: var(--moss-dark); }
+
+.worklist-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
 .time-group { margin-bottom: 1.5rem; }
 
 .time-group-label {
@@ -187,6 +283,26 @@ nav {
 .task-row:hover .task-delete { visibility: visible; }
 .task-delete .icon { width: 15px; height: 15px; }
 .task-delete:hover { color: var(--ink); }
+
+#notesArea {
+  width: 100%;
+  min-height: 360px;
+  padding: 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--paper-card);
+  font-family: "Noto Serif KR", serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  resize: vertical;
+}
+
+#notesArea:focus {
+  outline: none;
+  border-color: var(--moss);
+  box-shadow: 0 0 0 2px var(--moss-tint);
+}
 
 .empty-state {
   font-family: "Noto Serif KR", serif;
