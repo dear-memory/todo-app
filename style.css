@@ -115,6 +115,13 @@ body {
   right: 1rem;
 }
 
+.sync-note {
+  font-size: 11px;
+  color: #a13a3a;
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
 .sidebar-email {
   font-size: 11px;
   color: var(--ink-faint);

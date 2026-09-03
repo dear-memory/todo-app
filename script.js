@@ -68,6 +68,7 @@ function scheduleSave() {
 async function saveToFirestore() {
   if (!currentUser) return;
   const notesArea = document.getElementById("notesArea");
+  const syncNote = document.getElementById("syncNote");
   try {
     await setDoc(doc(db, "users", currentUser.uid), {
       tasks,
@@ -75,8 +76,13 @@ async function saveToFirestore() {
       notes: notesArea ? notesArea.value : "",
       updatedAt: Date.now(),
     });
+    if (syncNote) syncNote.hidden = true;
   } catch (e) {
     console.error("저장 실패:", e);
+    if (syncNote) {
+      syncNote.textContent = "저장 서버 연결이 막혀 있어요. 광고 차단 확장 프로그램을 꺼주세요.";
+      syncNote.hidden = false;
+    }
   }
 }
 
@@ -530,9 +536,24 @@ onAuthStateChanged(auth, async (user) => {
 
   if (user) {
     currentUser = user;
-    const notes = await loadFromFirestore(user.uid);
-    document.getElementById("notesArea").value = notes;
     document.getElementById("sidebarEmail").textContent = user.email;
+
+    let notes = "";
+    let syncWarning = "";
+    try {
+      notes = await loadFromFirestore(user.uid);
+    } catch (e) {
+      console.error("데이터 불러오기 실패:", e);
+      syncWarning =
+        "저장 서버 연결이 막혀 있어요. 광고 차단 확장 프로그램을 꺼주세요.";
+    }
+    document.getElementById("notesArea").value = notes;
+
+    const syncNote = document.getElementById("syncNote");
+    if (syncNote) {
+      syncNote.textContent = syncWarning;
+      syncNote.hidden = !syncWarning;
+    }
 
     currentDate = todayStr();
     renderDate();
