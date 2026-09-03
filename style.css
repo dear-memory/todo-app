@@ -101,6 +101,21 @@ body {
   box-shadow: 0 0 0 2px var(--moss-tint);
 }
 
+.forgot-link {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 10px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.forgot-link:hover { color: var(--moss-dark); }
+
 .auth-note {
   text-align: center;
   font-size: 12px;

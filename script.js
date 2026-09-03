@@ -5,6 +5,7 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -481,12 +482,14 @@ function setupAuth() {
   const submitBtn = document.getElementById("authSubmitBtn");
   const authError = document.getElementById("authError");
   const authNote = document.getElementById("authNote");
+  const forgotLink = document.getElementById("forgotLink");
 
   function setMode(newMode) {
     mode = newMode;
     tabLogin.classList.toggle("active", mode === "login");
     tabSignup.classList.toggle("active", mode === "signup");
     submitBtn.textContent = mode === "login" ? "로그인" : "회원가입";
+    forgotLink.hidden = mode !== "login";
     authNote.textContent =
       mode === "login" ? "" : "회원가입하면 바로 로그인됩니다.";
     authError.hidden = true;
@@ -494,6 +497,26 @@ function setupAuth() {
 
   tabLogin.addEventListener("click", () => setMode("login"));
   tabSignup.addEventListener("click", () => setMode("signup"));
+
+  forgotLink.addEventListener("click", async () => {
+    const email = document.getElementById("authEmail").value.trim();
+    authError.hidden = true;
+    authNote.textContent = "";
+
+    if (!email) {
+      authError.textContent = "재설정 메일을 받을 이메일을 먼저 입력해주세요.";
+      authError.hidden = false;
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      authNote.textContent = `${email} 주소로 재설정 링크를 보냈어요. 메일함을 확인해주세요.`;
+    } catch (err) {
+      authError.textContent = authErrorMessage(err.code);
+      authError.hidden = false;
+    }
+  });
 
   document.getElementById("authForm").addEventListener("submit", async (e) => {
     e.preventDefault();
