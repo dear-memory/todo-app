@@ -534,16 +534,20 @@ function setupAuth() {
     const password = document.getElementById("authPassword").value;
     authError.hidden = true;
     submitBtn.disabled = true;
+    const originalLabel = submitBtn.textContent;
+    submitBtn.textContent = mode === "login" ? "로그인 중..." : "가입 중...";
 
     try {
       if (mode === "login") {
         await signInWithEmailAndPassword(auth, email, password);
+        submitBtn.textContent = "데이터 불러오는 중...";
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (err) {
       authError.textContent = authErrorMessage(err.code);
       authError.hidden = false;
+      submitBtn.textContent = originalLabel;
     } finally {
       submitBtn.disabled = false;
     }
