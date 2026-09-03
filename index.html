@@ -7,10 +7,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
-  <div class="app">
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-box">
+      <p class="logo" style="text-align:center; margin-bottom:1.5rem;">할일장</p>
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tabLogin" data-mode="login">로그인</button>
+        <button type="button" class="auth-tab" id="tabSignup" data-mode="signup">회원가입</button>
+      </div>
+      <form id="authForm">
+        <input type="email" id="authEmail" placeholder="이메일" required autocomplete="email">
+        <input type="password" id="authPassword" placeholder="비밀번호 (6자 이상)" required autocomplete="current-password">
+        <p class="field-error" id="authError" hidden></p>
+        <button type="submit" class="submit-btn" id="authSubmitBtn">로그인</button>
+      </form>
+      <p class="auth-note" id="authNote"></p>
+    </div>
+  </div>
+
+  <div class="app" id="appRoot" hidden>
     <aside class="sidebar">
       <p class="logo">할일장</p>
       <nav>
@@ -31,6 +48,11 @@
           메모
         </button>
       </nav>
+
+      <div class="sidebar-footer">
+        <p class="sidebar-email" id="sidebarEmail"></p>
+        <button type="button" class="logout-btn" id="logoutBtn">로그아웃</button>
+      </div>
     </aside>
 
     <main class="main">
@@ -120,6 +142,6 @@
     </aside>
   </div>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js?v=3"></script>
 </body>
 </html>

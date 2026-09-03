@@ -39,9 +39,106 @@ body {
   margin: 0 auto;
 }
 
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 320px;
+  padding: 2rem;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1.25rem;
+  background: var(--paper-card);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.auth-tab.active {
+  background: #fff;
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+#authForm input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-card);
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+#authForm input:focus {
+  outline: none;
+  border-color: var(--moss);
+  box-shadow: 0 0 0 2px var(--moss-tint);
+}
+
+.auth-note {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 1rem;
+}
+
+.sidebar-footer {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 1rem;
+  right: 1rem;
+}
+
+.sidebar-email {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin: 0 0 6px;
+  word-break: break-all;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 7px 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper-card);
+  color: var(--ink-soft);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.logout-btn:hover { background: var(--line); color: var(--ink); }
+
 .sidebar {
   padding: 2rem 1.25rem;
   border-right: 1px solid var(--line);
+  position: relative;
 }
 
 .logo {

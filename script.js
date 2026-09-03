@@ -1,6 +1,22 @@
-const STORAGE_KEY = "haliljang-tasks";
-const NOTES_KEY = "haliljang-notes";
-const WORKLIST_KEY = "haliljang-worklist";
+import { firebaseConfig } from "./app-config.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 const CATEGORY_BG = {
   "업무": "var(--work-bg)",
@@ -22,6 +38,9 @@ const ICONS = {
   evening: '<svg class="icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
 };
 
+const PERIOD_LABEL = { none: "시간 미정", morning: "오전", afternoon: "오후", evening: "저녁" };
+const PERIOD_ORDER = ["none", "morning", "afternoon", "evening"];
+
 function todayStr() {
   const d = new Date();
   const y = d.getFullYear();
@@ -31,28 +50,48 @@ function todayStr() {
 }
 
 let currentDate = todayStr();
+let currentUser = null;
+let tasks = [];
+let worklist = [];
+let expandedIds = new Set();
+let selectedCategory = "업무";
+let saveTimer = null;
 
-function loadTasks() {
+// ---------- Firestore 동기화 ----------
+
+function scheduleSave() {
+  if (!currentUser) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToFirestore, 400);
+}
+
+async function saveToFirestore() {
+  if (!currentUser) return;
+  const notesArea = document.getElementById("notesArea");
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {}
-  const t = todayStr();
-  return [
-    { id: 1, title: "우유랑 계란 사기", time: "09:00", category: "개인", done: true, date: t },
-    { id: 2, title: "발표자료 마무리하기", time: null, category: "업무", done: false, date: t },
-    { id: 3, title: "병원 예약", time: "14:00", category: "개인", done: false, date: t },
-    { id: 4, title: "책 서른 페이지 읽기", time: null, category: "개인성장", done: false, date: t },
-  ];
+    await setDoc(doc(db, "users", currentUser.uid), {
+      tasks,
+      worklist,
+      notes: notesArea ? notesArea.value : "",
+      updatedAt: Date.now(),
+    });
+  } catch (e) {
+    console.error("저장 실패:", e);
+  }
 }
 
-function saveTasks() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+async function loadFromFirestore(uid) {
+  const snap = await getDoc(doc(db, "users", uid));
+  if (snap.exists()) {
+    const data = snap.data();
+    tasks = data.tasks || [];
+    worklist = data.worklist || [];
+    return data.notes || "";
+  }
+  return "";
 }
 
-let tasks = loadTasks();
-// 이전 버전 데이터 호환: date 필드가 없는 항목은 오늘 날짜로 채움
-tasks.forEach((t) => { if (!t.date) t.date = todayStr(); });
+// ---------- 날짜/할 일 (오늘 화면) ----------
 
 function periodOf(time) {
   if (!time) return "none";
@@ -61,9 +100,6 @@ function periodOf(time) {
   if (hour < 18) return "afternoon";
   return "evening";
 }
-
-const PERIOD_LABEL = { none: "시간 미정", morning: "오전", afternoon: "오후", evening: "저녁" };
-const PERIOD_ORDER = ["none", "morning", "afternoon", "evening"];
 
 function formatDateLabel(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -89,8 +125,6 @@ function shiftDate(days) {
   renderDate();
   render();
 }
-
-let expandedIds = new Set();
 
 function render() {
   const container = document.getElementById("listSections");
@@ -157,7 +191,7 @@ function renderTaskItem(task) {
     textarea.value = task.detail || "";
     textarea.addEventListener("input", () => {
       task.detail = textarea.value;
-      saveTasks();
+      scheduleSave();
     });
     detail.appendChild(textarea);
     wrapper.appendChild(detail);
@@ -225,17 +259,15 @@ function toggleExpanded(id) {
 function toggleDone(id) {
   const task = tasks.find((t) => t.id === id);
   if (task) task.done = !task.done;
-  saveTasks();
+  scheduleSave();
   render();
 }
 
 function deleteTask(id) {
   tasks = tasks.filter((t) => t.id !== id);
-  saveTasks();
+  scheduleSave();
   render();
 }
-
-let selectedCategory = "업무";
 
 function setupDateNav() {
   document.getElementById("prevDayBtn").addEventListener("click", () => shiftDate(-1));
@@ -293,7 +325,7 @@ function setupForm() {
       done: false,
       date: currentDate,
     });
-    saveTasks();
+    scheduleSave();
     render();
 
     titleInput.value = "";
@@ -336,25 +368,12 @@ function setupNav() {
 
 function setupNotes() {
   const notesArea = document.getElementById("notesArea");
-  notesArea.value = localStorage.getItem(NOTES_KEY) || "";
   notesArea.addEventListener("input", () => {
-    localStorage.setItem(NOTES_KEY, notesArea.value);
+    scheduleSave();
   });
 }
 
-function loadWorklist() {
-  try {
-    const raw = localStorage.getItem(WORKLIST_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {}
-  return [];
-}
-
-function saveWorklist() {
-  localStorage.setItem(WORKLIST_KEY, JSON.stringify(worklist));
-}
-
-let worklist = loadWorklist();
+// ---------- 작업 목록 ----------
 
 function renderWorklist() {
   const container = document.getElementById("worklistItems");
@@ -373,7 +392,7 @@ function renderWorklist() {
     checkbox.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
     checkbox.addEventListener("click", () => {
       item.done = !item.done;
-      saveWorklist();
+      scheduleSave();
       renderWorklist();
     });
     row.appendChild(checkbox);
@@ -384,7 +403,7 @@ function renderWorklist() {
     title.textContent = item.title;
     title.addEventListener("click", () => {
       item.done = !item.done;
-      saveWorklist();
+      scheduleSave();
       renderWorklist();
     });
     row.appendChild(title);
@@ -396,7 +415,7 @@ function renderWorklist() {
     del.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     del.addEventListener("click", () => {
       worklist = worklist.filter((w) => w.id !== item.id);
-      saveWorklist();
+      scheduleSave();
       renderWorklist();
     });
     row.appendChild(del);
@@ -420,7 +439,7 @@ function setupWorklist() {
     error.hidden = true;
 
     worklist.push({ id: Date.now(), title, done: false });
-    saveWorklist();
+    scheduleSave();
     renderWorklist();
 
     input.value = "";
@@ -434,11 +453,99 @@ function setupWorklist() {
   });
 }
 
-renderDate();
-render();
+// ---------- 로그인 / 회원가입 ----------
+
+function authErrorMessage(code) {
+  const map = {
+    "auth/invalid-email": "이메일 형식이 올바르지 않아요.",
+    "auth/user-not-found": "가입되지 않은 이메일이에요.",
+    "auth/wrong-password": "비밀번호가 틀렸어요.",
+    "auth/invalid-credential": "이메일 또는 비밀번호가 올바르지 않아요.",
+    "auth/email-already-in-use": "이미 가입된 이메일이에요.",
+    "auth/weak-password": "비밀번호는 6자 이상이어야 해요.",
+    "auth/too-many-requests": "시도가 너무 많아요. 잠시 후 다시 시도해주세요.",
+  };
+  return map[code] || "문제가 발생했어요. 다시 시도해주세요.";
+}
+
+function setupAuth() {
+  let mode = "login";
+  const tabLogin = document.getElementById("tabLogin");
+  const tabSignup = document.getElementById("tabSignup");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const authError = document.getElementById("authError");
+  const authNote = document.getElementById("authNote");
+
+  function setMode(newMode) {
+    mode = newMode;
+    tabLogin.classList.toggle("active", mode === "login");
+    tabSignup.classList.toggle("active", mode === "signup");
+    submitBtn.textContent = mode === "login" ? "로그인" : "회원가입";
+    authNote.textContent =
+      mode === "login" ? "" : "회원가입하면 바로 로그인됩니다.";
+    authError.hidden = true;
+  }
+
+  tabLogin.addEventListener("click", () => setMode("login"));
+  tabSignup.addEventListener("click", () => setMode("signup"));
+
+  document.getElementById("authForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    authError.hidden = true;
+    submitBtn.disabled = true;
+
+    try {
+      if (mode === "login") {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err) {
+      authError.textContent = authErrorMessage(err.code);
+      authError.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    signOut(auth);
+  });
+}
+
+// ---------- 초기화 ----------
+
 setupForm();
 setupNav();
 setupNotes();
 setupDateNav();
 setupWorklist();
-renderWorklist();
+setupAuth();
+
+onAuthStateChanged(auth, async (user) => {
+  const overlay = document.getElementById("authOverlay");
+  const appRoot = document.getElementById("appRoot");
+
+  if (user) {
+    currentUser = user;
+    const notes = await loadFromFirestore(user.uid);
+    document.getElementById("notesArea").value = notes;
+    document.getElementById("sidebarEmail").textContent = user.email;
+
+    currentDate = todayStr();
+    renderDate();
+    render();
+    renderWorklist();
+
+    overlay.hidden = true;
+    appRoot.hidden = false;
+  } else {
+    currentUser = null;
+    tasks = [];
+    worklist = [];
+    overlay.hidden = false;
+    appRoot.hidden = true;
+  }
+});
