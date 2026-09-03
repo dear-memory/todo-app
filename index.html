@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>할일장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <p class="logo">할일장</p>
+      <nav>
+        <button class="nav-item active" data-view="today">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>
+          오늘
+        </button>
+        <button class="nav-item" data-view="week">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          이번 주
+        </button>
+        <button class="nav-item" data-view="notes">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          메모
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <p class="date" id="todayDate"></p>
+      <p class="subtitle" id="taskCountLabel"></p>
+
+      <section id="listSections"></section>
+
+      <p class="empty-state" id="emptyState" hidden>오늘은 할 일이 없어요. 오른쪽에서 하나 추가해보세요.</p>
+    </main>
+
+    <aside class="side-panel">
+      <div class="progress-card">
+        <p class="progress-label">오늘 진행률</p>
+        <p class="progress-value" id="progressValue">0 / 0</p>
+      </div>
+      <p class="encourage" id="encourageText"></p>
+
+      <div class="divider"></div>
+
+      <form id="addForm">
+        <p class="form-title">새 할 일</p>
+        <input type="text" id="titleInput" placeholder="무엇을 해야 하나요?" required>
+        <p class="field-error" id="titleError" hidden>할 일을 입력해주세요.</p>
+
+        <div class="toggle-row">
+          <span>시간 설정</span>
+          <label class="toggle">
+            <input type="checkbox" id="timeToggle">
+            <span class="toggle-track"><span class="toggle-knob"></span></span>
+          </label>
+        </div>
+        <div id="timeField" class="time-field" hidden>
+          <input type="time" id="timeInput" value="09:00">
+        </div>
+
+        <p class="field-label">카테고리</p>
+        <div class="category-chips" id="categoryChips">
+          <button type="button" class="chip chip-work selected" data-category="업무">업무</button>
+          <button type="button" class="chip chip-personal" data-category="개인">개인</button>
+          <button type="button" class="chip chip-exercise" data-category="운동">운동</button>
+          <button type="button" class="chip chip-growth" data-category="개인성장">개인성장</button>
+        </div>
+
+        <button type="submit" class="submit-btn">추가하기</button>
+      </form>
+    </aside>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
