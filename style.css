@@ -333,6 +333,79 @@ nav {
   opacity: 1;
 }
 
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+.week-day {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 140px;
+  cursor: pointer;
+}
+
+.week-day:hover {
+  border-color: var(--line-strong);
+  background: var(--paper-card);
+}
+
+.week-day.is-today {
+  border-color: var(--moss);
+  background: var(--moss-tint);
+}
+
+.week-day-header {
+  font-family: "Noto Serif KR", serif;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--ink-soft);
+}
+
+.week-day.is-today .week-day-header {
+  color: var(--moss-dark);
+}
+
+.week-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.week-task .checkbox {
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+}
+
+.week-task .checkbox svg { width: 9px; height: 9px; }
+
+.week-task-title {
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.week-task-title.done {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.week-day-empty {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 860px) {
+  .week-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .time-group { margin-bottom: 1.5rem; }
 
 .time-group-label {

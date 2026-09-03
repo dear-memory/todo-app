@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <div id="authOverlay" class="auth-overlay">
@@ -80,9 +80,9 @@
       </div>
 
       <div id="view-week" hidden>
-        <p class="date">이번 주</p>
-        <p class="subtitle">요일별로 할 일을 모아 보여줄 예정이에요.</p>
-        <p class="empty-state">이번 주 화면은 아직 준비 중이에요.</p>
+        <p class="date" id="weekRangeLabel">이번 주</p>
+        <p class="subtitle">날짜를 누르면 그날의 오늘 화면으로 이동해요.</p>
+        <div id="weekGrid" class="week-grid"></div>
       </div>
 
       <div id="view-worklist" hidden>
@@ -144,6 +144,6 @@
     </aside>
   </div>
 
-  <script type="module" src="script.js?v=8"></script>
+  <script type="module" src="script.js?v=9"></script>
 </body>
 </html>

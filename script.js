@@ -358,6 +358,96 @@ function setupForm() {
   });
 }
 
+// ---------- 이번 주 ----------
+
+function getWeekDates() {
+  const t = todayStr();
+  const [y, m, d] = t.split("-").map(Number);
+  const today = new Date(y, m - 1, d);
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - today.getDay());
+
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(sunday);
+    dt.setDate(sunday.getDate() + i);
+    const ny = dt.getFullYear();
+    const nm = String(dt.getMonth() + 1).padStart(2, "0");
+    const nd = String(dt.getDate()).padStart(2, "0");
+    dates.push(`${ny}-${nm}-${nd}`);
+  }
+  return dates;
+}
+
+function renderWeek() {
+  const weekDates = getWeekDates();
+  const days = ["일", "월", "화", "수", "목", "금", "토"];
+  const today = todayStr();
+
+  const first = weekDates[0].split("-");
+  const last = weekDates[6].split("-");
+  document.getElementById(
+    "weekRangeLabel"
+  ).textContent = `${parseInt(first[1], 10)}월 ${parseInt(first[2], 10)}일 – ${parseInt(last[1], 10)}월 ${parseInt(last[2], 10)}일`;
+
+  const grid = document.getElementById("weekGrid");
+  grid.innerHTML = "";
+
+  weekDates.forEach((dateStr, i) => {
+    const [, m, d] = dateStr.split("-").map(Number);
+    const dayTasks = tasks
+      .filter((t) => t.date === dateStr)
+      .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+
+    const col = document.createElement("div");
+    col.className = "week-day" + (dateStr === today ? " is-today" : "");
+    col.addEventListener("click", (e) => {
+      if (e.target.closest(".checkbox")) return;
+      currentDate = dateStr;
+      renderDate();
+      render();
+      document.querySelector('.nav-item[data-view="today"]').click();
+    });
+
+    const header = document.createElement("p");
+    header.className = "week-day-header";
+    header.textContent = `${m}/${d} (${days[i]})`;
+    col.appendChild(header);
+
+    if (dayTasks.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "week-day-empty";
+      empty.textContent = "할 일 없음";
+      col.appendChild(empty);
+    } else {
+      dayTasks.forEach((task) => {
+        const row = document.createElement("div");
+        row.className = "week-task";
+
+        const checkbox = document.createElement("button");
+        checkbox.type = "button";
+        checkbox.className = "checkbox" + (task.done ? " done" : "");
+        checkbox.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+        checkbox.addEventListener("click", (e) => {
+          e.stopPropagation();
+          toggleDone(task.id);
+          renderWeek();
+        });
+        row.appendChild(checkbox);
+
+        const title = document.createElement("span");
+        title.className = "week-task-title" + (task.done ? " done" : "");
+        title.textContent = task.title;
+        row.appendChild(title);
+
+        col.appendChild(row);
+      });
+    }
+
+    grid.appendChild(col);
+  });
+}
+
 function setupNav() {
   const navItems = document.querySelectorAll(".nav-item");
   const views = {
@@ -377,6 +467,8 @@ function setupNav() {
       Object.keys(views).forEach((key) => {
         views[key].hidden = key !== target;
       });
+
+      if (target === "week") renderWeek();
 
       sidePanel.hidden = target !== "today";
     });
