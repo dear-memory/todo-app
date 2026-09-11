@@ -1,24 +1,26 @@
 :root {
-  --paper: #ffffff;
-  --paper-card: #f7f7f5;
-  --ink: #1c1c1a;
-  --ink-soft: #55544e;
-  --ink-faint: #8a897f;
-  --line: #e6e4de;
-  --line-strong: #c7c5bb;
-  --moss: #3d5a45;
-  --moss-dark: #294031;
-  --moss-tint: #e3ede6;
-  --done-bg: #d7e6da;
+  --paper: #f7f1e1;
+  --paper-card: #ffffff;
+  --ink: #14213d;
+  --ink-soft: #45526e;
+  --ink-faint: #8b93a6;
+  --line: #e6dcc0;
+  --line-strong: #d3c6a0;
+  --moss: #14213d;
+  --moss-dark: #0b1526;
+  --moss-tint: #e8ebf2;
+  --done-bg: #cfead9;
+  --gold: #c9973b;
+  --gold-tint: #f3e7c9;
 
-  --work: #33507e;
-  --work-bg: #dde4f0;
-  --personal: #92660f;
-  --personal-bg: #f0e5cd;
-  --exercise: #2f6b4f;
-  --exercise-bg: #dcece2;
-  --growth: #6b3f84;
-  --growth-bg: #e9dcef;
+  --work: #14213d;
+  --work-bg: #e3e7f0;
+  --personal: #8a6414;
+  --personal-bg: #f3e7c9;
+  --exercise: #1f7a4d;
+  --exercise-bg: #d9f0e1;
+  --growth: #8b3a46;
+  --growth-bg: #f3dee1;
 
   font-family: "Noto Sans KR", sans-serif;
 }
@@ -169,9 +171,9 @@ body {
 }
 
 .logo {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 800;
   margin: 0 0 2rem;
 }
 
@@ -216,9 +218,9 @@ nav {
 }
 
 .date {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
   font-size: 26px;
-  font-weight: 600;
+  font-weight: 800;
   margin: 0 0 4px;
 }
 
@@ -226,6 +228,15 @@ nav {
   font-size: 13px;
   color: var(--ink-faint);
   margin: 0 0 1.75rem;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin: 0 0 10px;
+  text-transform: uppercase;
 }
 
 .date-nav {
@@ -358,9 +369,9 @@ nav {
 }
 
 .week-day-header {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 8px;
   color: var(--ink-soft);
 }
@@ -428,7 +439,8 @@ nav {
 }
 
 .task-time {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
+  font-weight: 500;
   font-size: 13px;
   color: var(--ink-faint);
   width: 46px;
@@ -458,7 +470,8 @@ nav {
 .checkbox.done svg { display: block; }
 
 .task-title {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
+  font-weight: 500;
   font-size: 16px;
   flex: 1;
   cursor: pointer;
@@ -487,8 +500,9 @@ nav {
 
 .category-menu-option {
   font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 8px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
   border: 1.5px solid transparent;
   cursor: pointer;
   font-family: "Noto Sans KR", sans-serif;
@@ -506,10 +520,11 @@ nav {
 
 .task-tag {
   font-size: 11px;
-  padding: 3px 9px;
-  border-radius: 8px;
+  font-weight: 700;
+  padding: 3px 11px;
+  border-radius: 999px;
   white-space: nowrap;
-  border: none;
+  border: 1.5px solid currentColor;
   font-family: "Noto Sans KR", sans-serif;
   cursor: pointer;
 }
@@ -584,7 +599,7 @@ nav {
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--paper-card);
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
   font-size: 15px;
   line-height: 1.7;
   color: var(--ink);
@@ -598,7 +613,7 @@ nav {
 }
 
 .empty-state {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
   font-size: 15px;
   color: var(--ink-faint);
   padding: 2rem 0;
@@ -610,18 +625,19 @@ nav {
 }
 
 .progress-card {
-  background: var(--paper-card);
-  border-radius: 8px;
+  background: var(--moss);
+  border-radius: 10px;
   padding: 1rem;
   text-align: center;
   margin-bottom: 1rem;
 }
 
-.progress-label { font-size: 13px; color: var(--ink-faint); margin: 0 0 4px; }
-.progress-value { font-size: 24px; font-weight: 500; margin: 0; }
+.progress-label { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--gold); margin: 0 0 4px; text-transform: uppercase; }
+.progress-value { font-size: 24px; font-weight: 800; color: #fff; margin: 0; font-family: "Noto Sans KR", sans-serif; }
 
 .encourage {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
+  font-weight: 500;
   font-size: 14px;
   font-style: italic;
   color: var(--ink-soft);
@@ -636,9 +652,9 @@ nav {
 }
 
 .form-title {
-  font-family: "Noto Serif KR", serif;
+  font-family: "Noto Sans KR", sans-serif;
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 1rem;
 }
 
