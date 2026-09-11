@@ -199,6 +199,8 @@ function render() {
   }
 }
 
+let categoryMenuTaskId = null;
+
 function renderTaskItem(task) {
   const wrapper = document.createElement("div");
   const isExpanded = expandedIds.has(task.id);
@@ -217,6 +219,28 @@ function renderTaskItem(task) {
     });
     detail.appendChild(textarea);
     wrapper.appendChild(detail);
+  }
+
+  if (categoryMenuTaskId === task.id) {
+    const menu = document.createElement("div");
+    menu.className = "category-menu";
+    CATEGORY_ORDER.forEach((cat) => {
+      const opt = document.createElement("button");
+      opt.type = "button";
+      opt.className = "category-menu-option" + (cat === task.category ? " selected" : "");
+      opt.textContent = cat;
+      opt.style.background = CATEGORY_BG[cat];
+      opt.style.color = CATEGORY_FG[cat];
+      opt.addEventListener("click", (e) => {
+        e.stopPropagation();
+        task.category = cat;
+        categoryMenuTaskId = null;
+        scheduleSave();
+        render();
+      });
+      menu.appendChild(opt);
+    });
+    wrapper.appendChild(menu);
   }
 
   return wrapper;
@@ -259,11 +283,18 @@ function renderTaskRow(task, isExpanded) {
   chevron.addEventListener("click", () => toggleExpanded(task.id));
   row.appendChild(chevron);
 
-  const tag = document.createElement("span");
+  const tag = document.createElement("button");
+  tag.type = "button";
   tag.className = "task-tag";
   tag.textContent = task.category;
   tag.style.background = CATEGORY_BG[task.category];
   tag.style.color = CATEGORY_FG[task.category];
+  tag.setAttribute("aria-label", "카테고리 변경");
+  tag.addEventListener("click", (e) => {
+    e.stopPropagation();
+    categoryMenuTaskId = categoryMenuTaskId === task.id ? null : task.id;
+    render();
+  });
   row.appendChild(tag);
 
   const del = document.createElement("button");
@@ -276,6 +307,8 @@ function renderTaskRow(task, isExpanded) {
 
   return row;
 }
+
+const CATEGORY_ORDER = ["업무", "개인", "운동", "개인성장"];
 
 function toggleExpanded(id) {
   if (expandedIds.has(id)) {
