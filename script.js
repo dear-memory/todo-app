@@ -126,6 +126,11 @@ function formatDateLabel(dateStr) {
   return `${m}월 ${d}일, ${days[dateObj.getDay()]}요일${isToday ? " · 오늘" : ""}`;
 }
 
+function formatShortDate(dateStr) {
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${m}/${d}`;
+}
+
 function renderDate() {
   document.getElementById("todayDate").textContent = formatDateLabel(currentDate);
   document.getElementById("datePicker").value = currentDate;
@@ -240,6 +245,14 @@ function renderTaskRow(task, isExpanded) {
   title.addEventListener("click", () => toggleExpanded(task.id));
   row.appendChild(title);
 
+  if (task.rolledFrom) {
+    const rolled = document.createElement("span");
+    rolled.className = "task-rolled-tag";
+    rolled.title = `${formatShortDate(task.rolledFrom)}에 등록된 할 일이 이월됐어요`;
+    rolled.textContent = `${formatShortDate(task.rolledFrom)}부터`;
+    row.appendChild(rolled);
+  }
+
   const chevron = document.createElement("span");
   chevron.className = "task-chevron" + (isExpanded ? " expanded" : "");
   chevron.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
@@ -291,6 +304,7 @@ function rolloverIncompleteTasks() {
   let changed = false;
   tasks.forEach((t) => {
     if (!t.done && t.date < today) {
+      if (!t.rolledFrom) t.rolledFrom = t.date;
       t.date = today;
       changed = true;
     }
@@ -479,6 +493,13 @@ function renderWeek() {
         title.className = "week-task-title" + (task.done ? " done" : "");
         title.textContent = task.title;
         row.appendChild(title);
+
+        if (task.rolledFrom) {
+          const rolled = document.createElement("span");
+          rolled.className = "task-rolled-tag";
+          rolled.textContent = ` ${formatShortDate(task.rolledFrom)}부터`;
+          row.appendChild(rolled);
+        }
 
         col.appendChild(row);
       });

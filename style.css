@@ -469,6 +469,14 @@ nav {
   text-decoration: line-through;
 }
 
+.task-rolled-tag {
+  font-size: 11px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+}
+
 .task-tag {
   font-size: 11px;
   padding: 3px 9px;
