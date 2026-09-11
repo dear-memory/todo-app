@@ -286,6 +286,46 @@ function deleteTask(id) {
   render();
 }
 
+function rolloverIncompleteTasks() {
+  const today = todayStr();
+  let changed = false;
+  tasks.forEach((t) => {
+    if (!t.done && t.date < today) {
+      t.date = today;
+      changed = true;
+    }
+  });
+  if (changed) scheduleSave();
+}
+
+let dayWatcherStarted = false;
+
+function startDayWatcher() {
+  if (dayWatcherStarted) return;
+  dayWatcherStarted = true;
+  let lastKnownToday = todayStr();
+
+  setInterval(() => {
+    const nowToday = todayStr();
+    if (nowToday === lastKnownToday) return;
+
+    const wasOnToday = currentDate === lastKnownToday;
+    lastKnownToday = nowToday;
+
+    rolloverIncompleteTasks();
+
+    if (wasOnToday) {
+      currentDate = nowToday;
+      renderDate();
+      render();
+    }
+
+    if (!document.getElementById("view-week").hidden) {
+      renderWeek();
+    }
+  }, 30000);
+}
+
 function setupDateNav() {
   document.getElementById("prevDayBtn").addEventListener("click", () => shiftDate(-1));
   document.getElementById("nextDayBtn").addEventListener("click", () => shiftDate(1));
@@ -674,6 +714,7 @@ onAuthStateChanged(auth, async (user) => {
     try {
       notes = await loadFromFirestore(user.uid);
       console.log("[할일장] Firestore 데이터 불러오기 성공");
+      rolloverIncompleteTasks();
     } catch (e) {
       console.error("[할일장] 데이터 불러오기 실패:", e);
       syncWarning =
@@ -695,6 +736,7 @@ onAuthStateChanged(auth, async (user) => {
     console.log("[할일장] 화면 전환 실행");
     overlay.hidden = true;
     appRoot.hidden = false;
+    startDayWatcher();
   } else {
     currentUser = null;
     tasks = [];
