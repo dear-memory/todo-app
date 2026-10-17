@@ -10,7 +10,16 @@ function normalizedState(data) {
 }
 
 function stateSignature(data) {
-  return JSON.stringify(normalizedState(data));
+  // Firestore map field order is not an application data change.
+  // Sort object keys recursively, but preserve array order and JSON values.
+  return JSON.stringify(normalizedState(data), (_key, value) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return Object.fromEntries(
+        Object.keys(value).sort().map((key) => [key, value[key]])
+      );
+    }
+    return value;
+  });
 }
 
 function validUserDocument(data) {
