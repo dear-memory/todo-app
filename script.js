@@ -1,4 +1,5 @@
 import { firebaseConfig } from "./app-config.js";
+import { parseSpoken } from "./bridge/parser.mjs";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -17,6 +18,8 @@ import {
   onSnapshot,
   updateDoc,
   deleteDoc,
+  addDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
@@ -810,6 +813,124 @@ function setupAuth() {
   });
 }
 
+
+// ---------- 음성으로 새 할 일 추가 (기존 문서와 분리) ----------
+// 브라우저 마이크의 음성 인식을 사용합니다. 인식된 내용은
+// users/{uid}/chatgptTasks 신규 문서에만 추가합니다.
+// 절대로 users/{uid}의 기존 tasks, worklist, notes를 저장/수정하지 않습니다.
+let speechSession = null;
+let voiceSaving = false;
+const SpeechCapture = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function voiceNotice(message) {
+  const status = document.getElementById("voiceStatus");
+  if (!status) return;
+  status.hidden = false;
+  status.textContent = message;
+}
+
+async function saveRecognizedTask(spoken, uid) {
+  if (voiceSaving) return;
+  if (!currentUser || currentUser.uid !== uid) {
+    voiceNotice("로그인을 확인해 주세요.");
+    return;
+  }
+  let newTask;
+  try {
+    newTask = parseSpoken(spoken);
+  } catch (error) {
+    voiceNotice("인식 내용 확인 필요: " + error.message);
+    return;
+  }
+  if (!newTask.title || !newTask.date) {
+    voiceNotice("제목과 날짜를 인식하지 못했습니다. 다시 말해 주세요.");
+    return;
+  }
+  newTask.category = selectedCategory;
+  voiceSaving = true;
+  document.getElementById("voiceAddBtn").disabled = true;
+  voiceNotice("인식: " + spoken + " — 저장 중...");
+  try {
+    if (!currentUser || currentUser.uid !== uid) throw new Error("다시 로그인해 주세요.");
+    // 권한 있는 사용자만 이 별도 컬렉션에 create할 수 있습니다.
+    await addDoc(collection(db, "users", uid, "chatgptTasks"), {
+      ...newTask,
+      createdAt: serverTimestamp(),
+    });
+    voiceNotice("✓ 저장 완료: " + newTask.date + (newTask.time ? " " + newTask.time : "")
+      + " · " + newTask.title);
+    if (currentDate !== newTask.date) {
+      currentDate = newTask.date;
+      renderDate();
+      render();
+    }
+  } catch (error) {
+    console.error("음성 할 일 저장 실패:", error.code || error.message);
+    voiceNotice(error.code === "permission-denied"
+      ? "저장 권한이 아직 설정되지 않았습니다. Firebase 보안 규칙을 확인해 주세요."
+      : "저장에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.");
+  } finally {
+    voiceSaving = false;
+    document.getElementById("voiceAddBtn").disabled = false;
+  }
+}
+
+function setupVoiceAdd() {
+  const button = document.getElementById("voiceAddBtn");
+  if (!button) return;
+  if (!SpeechCapture) {
+    button.disabled = true;
+    voiceNotice("현재 브라우저는 음성 인식을 지원하지 않습니다. Chrome 등을 사용해 주세요.");
+    return;
+  }
+
+  button.addEventListener("click", () => {
+    if (speechSession) {
+      speechSession.stop();
+      return;
+    }
+    if (voiceSaving) return;
+    if (!currentUser) return voiceNotice("먼저 할일장 계정으로 로그인해 주세요.");
+
+    const uid = currentUser.uid;
+    const recognition = new SpeechCapture();
+    speechSession = recognition;
+    recognition.lang = "ko-KR";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+    let handled = false;
+
+    recognition.onresult = async (event) => {
+      if (handled) return;
+      const spoken = Array.from(event.results)
+        .filter((result) => result.isFinal)
+        .map((result) => result[0].transcript)
+        .join(" ").trim();
+      if (!spoken) return;
+      handled = true;
+      await saveRecognizedTask(spoken, uid);
+    };
+    recognition.onerror = (event) => {
+      if (!handled) voiceNotice(event.error === "not-allowed"
+        ? "마이크 권한이 차단됐습니다. 브라우저 설정에서 허용해 주세요."
+        : "음성을 인식하지 못했습니다. 다시 눌러 말해 주세요.");
+    };
+    recognition.onend = () => {
+      if (speechSession === recognition) speechSession = null;
+      button.textContent = "🎙️ 말해서 바로 저장";
+    };
+    try {
+      recognition.start();
+      button.textContent = "🎙️ 듣는 중... (다시 눌러 종료)";
+      voiceNotice("듣고 있습니다. 예: 내일 오후 3시 사진 보정 추가해 줘.");
+    } catch {
+      speechSession = null;
+      voiceNotice("음성 인식을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    }
+  });
+}
+
 // ---------- 초기화 ----------
 
 setupForm();
@@ -818,6 +939,7 @@ setupNotes();
 setupDateNav();
 setupWorklist();
 setupAuth();
+setupVoiceAdd();
 
 onAuthStateChanged(auth, async (user) => {
   console.log("[할일장] onAuthStateChanged 실행됨, user:", user ? user.email : null);
@@ -862,6 +984,10 @@ onAuthStateChanged(auth, async (user) => {
     if (stopChatgptTaskSync) {
       stopChatgptTaskSync();
       stopChatgptTaskSync = null;
+    }
+    if (speechSession) {
+      speechSession.abort();
+      speechSession = null;
     }
     currentUser = null;
     tasks = [];
