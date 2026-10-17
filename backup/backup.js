@@ -4,7 +4,7 @@ import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, collection, getDocs,
+  getFirestore, doc, getDocFromServer, collection, getDocsFromServer,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const auth = getAuth(initializeApp(firebaseConfig));
@@ -40,7 +40,7 @@ function safeJson(obj) {
   return JSON.stringify(obj, null, 2);
 }
 async function subcollection(uid, subpath) {
-  const result = await getDocs(collection(db, "users", uid, subpath));
+  const result = await getDocsFromServer(collection(db, "users", uid, subpath));
   return result.docs.map((snap) => ({ id: snap.id, data: snap.data() }));
 }
 
@@ -51,7 +51,7 @@ $("download").addEventListener("click", async () => {
   const uid = loginUser.uid;
   try {
     status("기존 사용자 문서를 읽고 있습니다...");
-    const userSnap = await getDoc(doc(db, "users", uid));
+    const userSnap = await getDocFromServer(doc(db, "users", uid));
     if (!userSnap.exists()) {
       throw new Error("기존 사용자 문서가 보이지 않습니다. 이 상태에서는 백업 완료로 처리하지 않습니다.");
     }
