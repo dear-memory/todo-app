@@ -31,7 +31,14 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:#667085;font-size:.9em}.dang
 <h2>읽기 전용 JSON 백업</h2>
 <p>현재 로그인 계정: <strong id="account"></strong></p>
 <p class="muted">원본 사용자 문서(tasks·worklist·notes)와 bookings·chatgptTasks 하위 컬렉션을 내려받습니다. 데이터는 브라우저에서 파일로 만들어지며 별도 서버로 전송하지 않습니다.</p>
-<button type="button" id="download">기존 내용 백업 파일 다운로드</button>
+<button type="button" id="download">백업 파일 생성</button>
+<div id="downloadReady" hidden style="padding:14px;margin-top:16px;border:1px solid #c7d7e9;border-radius:10px;background:#f0f6ff">
+  <p><strong>읽기 완료 — 다음 링크를 직접 눌러 PC에 저장하세요.</strong></p>
+  <a id="directSave" href="#" download style="display:inline-block;background:#1761a0;color:white;padding:12px 16px;text-decoration:none;border-radius:8px;margin-top:10px">↓ JSON 백업 파일 직접 다운로드</a>
+  <p class="muted">브라우저가 다운로드를 막으면 아래 '백업 내용 복사'를 누르거나 일반 Chrome/Edge 브라우저에서 이 페이지를 열어주세요.</p>
+  <button type="button" id="copyJson">백업 내용 복사 (대체 방법)</button>
+  <textarea id="backupJson" readonly hidden aria-label="백업 JSON 본문" style="min-height:130px;width:100%;margin-top:10px;white-space:pre"></textarea>
+</div>
 <button type="button" id="logout">로그아웃</button>
 </section>
 <section>
@@ -40,5 +47,5 @@ button:disabled{opacity:.5;cursor:wait}.muted{color:#667085;font-size:.9em}.dang
 <p class="muted">백업 JSON에는 개인 일정과 메모가 들어 있습니다. 안전하게 보관하고 공개 저장소나 채팅에 업로드하지 마세요.</p>
 </section>
 </main>
-<script type="module" src="./backup.js"></script>
+<script type="module" src="./backup.js?v=2"></script>
 </body></html>
