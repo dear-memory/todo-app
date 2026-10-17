@@ -1,0 +1,17 @@
+{
+  "name": "haliljang-chatgpt-functions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Firebase authenticated append-only task endpoint for ChatGPT integration",
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  }
+}
