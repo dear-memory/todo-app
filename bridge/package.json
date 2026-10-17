@@ -1,9 +1,0 @@
-{
-  "name": "haliljang-voice-bridge",
-  "private": true,
-  "version": "0.1.0",
-  "description": "Standalone Spark Firestore voice entry server, no Firebase Admin credentials",
-  "scripts": {
-    "test": "node --test test/*.test.cjs"
-  }
-}
