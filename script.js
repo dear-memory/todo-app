@@ -1,5 +1,6 @@
 import { firebaseConfig } from "./app-config.js";
 import { parseSpoken } from "./bridge/parser.mjs";
+import { stateSignature, validUserDocument } from "./storage-safety.mjs";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -13,7 +14,7 @@ import {
   getFirestore,
   doc,
   getDoc,
-  setDoc,
+  runTransaction,
   collection,
   onSnapshot,
   updateDoc,
@@ -67,37 +68,101 @@ let stopChatgptTaskSync = null;
 let expandedIds = new Set();
 let selectedCategory = "업무";
 let saveTimer = null;
+let isDataReady = false;
+let saveBlocked = false;
+let loadedSignature = null;
+let lastLoadedTime = null;
+let saving = false;
+let pendingChanges = 0;
+let authGeneration = 0;
 
-// ---------- Firestore 동기화 ----------
+// ---------- Firestore 안전 동기화 ----------
+// Fail closed: users/{uid} is NEVER rewritten unless its current contents were
+// read successfully and are still identical to the last verified snapshot.
+function setSyncWarning(message) {
+  const note = document.getElementById("syncNote");
+  if (!note) return;
+  note.textContent = message;
+  note.hidden = !message;
+}
 
 function scheduleSave() {
-  if (!currentUser) return;
+  if (!currentUser || !isDataReady || saveBlocked) {
+    setSyncWarning("데이터가 완전히 로드되지 않았거나 충돌이 발견되어 저장이 차단됐습니다. 새로고침하여 확인해 주세요.");
+    return;
+  }
+  pendingChanges++;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveToFirestore, 400);
+  saveTimer = setTimeout(saveToFirestore, 500);
 }
 
 async function saveToFirestore() {
-  if (!currentUser) return;
-  const notesArea = document.getElementById("notesArea");
-  const syncNote = document.getElementById("syncNote");
+  if (!currentUser || !isDataReady || saveBlocked || saving) return;
+  const uid = currentUser.uid;
+  const generation = authGeneration;
+  const currentRevision = pendingChanges;
+  const snapshotTasks = JSON.parse(JSON.stringify(tasks));
+  const snapshotWorklist = JSON.parse(JSON.stringify(worklist));
+  const snapshotNotes = document.getElementById("notesArea").value;
+  const signatureAtStart = loadedSignature;
+  const nextUpdatedAt = Math.max(
+    Date.now(),
+    (typeof lastLoadedTime === "number" ? lastLoadedTime : 0) + 1
+  );
+  saving = true;
   try {
-    await withTimeout(
-      setDoc(doc(db, "users", currentUser.uid), {
-        tasks,
-        worklist,
-        notes: notesArea ? notesArea.value : "",
-        updatedAt: Date.now(),
-      }),
-      3000
-    );
-    if (syncNote) syncNote.hidden = true;
-  } catch (e) {
-    console.error("저장 실패:", e);
-    if (syncNote) {
-      syncNote.textContent = "저장 서버 연결이 막혀 있어요. 광고 차단 확장 프로그램을 꺼주세요.";
-      syncNote.hidden = false;
+    await runTransaction(db, async (transaction) => {
+      if (authGeneration !== generation || currentUser?.uid !== uid || !isDataReady) {
+        throw new Error("auth_changed");
+      }
+      const userRef = doc(db, "users", uid);
+      const current = await transaction.get(userRef);
+      if (!current.exists() || !validUserDocument(current.data()) ||
+          stateSignature(current.data()) !== signatureAtStart) {
+        throw new Error("remote_data_conflict");
+      }
+      // Use update (not setDoc) to avoid erasing unknown fields on the user document.
+      // Only previously-loaded fields are changed, under a Firestore transaction.
+      transaction.update(userRef, {
+        tasks: snapshotTasks,
+        worklist: snapshotWorklist,
+        notes: snapshotNotes,
+        updatedAt: nextUpdatedAt,
+      });
+    });
+    if (authGeneration !== generation || currentUser?.uid !== uid) return;
+    loadedSignature = stateSignature({
+      tasks: snapshotTasks, worklist: snapshotWorklist,
+      notes: snapshotNotes, updatedAt: nextUpdatedAt,
+    });
+    lastLoadedTime = nextUpdatedAt;
+    setSyncWarning("");
+  } catch (error) {
+    if (authGeneration !== generation) return;
+    console.error("안전 저장 차단:", error);
+    saveBlocked = true;
+    setSyncWarning("저장하지 않았습니다. 기존 데이터와 충돌하거나 연결이 끊겼습니다. 현재 내용을 복사해 보관하고 새로고침한 뒤 확인해 주세요.");
+  } finally {
+    saving = false;
+    if (authGeneration === generation && !saveBlocked && pendingChanges > currentRevision) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveToFirestore, 100);
     }
   }
+}
+
+async function loadFromFirestore(uid) {
+  // A real document is required; a missing/denied/offline read must never be
+  // interpreted as an empty account and then saved over existing records.
+  const snap = await withTimeout(getDoc(doc(db, "users", uid)), 12000);
+  if (!snap.exists()) throw new Error("user_document_missing");
+  const data = snap.data();
+  if (!validUserDocument(data)) throw new Error("invalid_user_document");
+  tasks = data.tasks ?? [];
+  worklist = data.worklist ?? [];
+  loadedSignature = stateSignature(data);
+  lastLoadedTime = data.updatedAt ?? null;
+  return data.notes ?? "";
 }
 
 function withTimeout(promise, ms) {
@@ -105,17 +170,6 @@ function withTimeout(promise, ms) {
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
   ]);
-}
-
-async function loadFromFirestore(uid) {
-  const snap = await withTimeout(getDoc(doc(db, "users", uid)), 3000);
-  if (snap.exists()) {
-    const data = snap.data();
-    tasks = data.tasks || [];
-    worklist = data.worklist || [];
-    return data.notes || "";
-  }
-  return "";
 }
 
 // ---------- ChatGPT 전용 하위 컬렉션 (기존 사용자 문서 불변) ----------
@@ -401,18 +455,7 @@ function deleteTask(id) {
   render();
 }
 
-function rolloverIncompleteTasks() {
-  const today = todayStr();
-  let changed = false;
-  tasks.forEach((t) => {
-    if (!t.done && t.date < today) {
-      if (!t.rolledFrom) t.rolledFrom = t.date;
-      t.date = today;
-      changed = true;
-    }
-  });
-  if (changed) scheduleSave();
-}
+// Automatic rollover was intentionally disabled to protect existing dates.
 
 let dayWatcherStarted = false;
 
@@ -428,8 +471,8 @@ function startDayWatcher() {
     const wasOnToday = currentDate === lastKnownToday;
     lastKnownToday = nowToday;
 
-    rolloverIncompleteTasks();
-
+    // Never move or rewrite previous records automatically at midnight.
+    // Incomplete tasks keep their originally saved dates.
     if (wasOnToday) {
       currentDate = nowToday;
       renderDate();
@@ -948,58 +991,74 @@ setupAuth();
 setupVoiceAdd();
 
 onAuthStateChanged(auth, async (user) => {
-  console.log("[할일장] onAuthStateChanged 실행됨, user:", user ? user.email : null);
+  const generation = ++authGeneration;
+  clearTimeout(saveTimer);
+  isDataReady = false;
+  saveBlocked = false;
+  loadedSignature = null;
+  lastLoadedTime = null;
+  pendingChanges = 0;
+
   const overlay = document.getElementById("authOverlay");
   const appRoot = document.getElementById("appRoot");
+  const errorArea = document.getElementById("authError");
+  appRoot.hidden = true;
 
-  if (user) {
-    currentUser = user;
-    document.getElementById("sidebarEmail").textContent = user.email;
+  if (stopChatgptTaskSync) {
+    stopChatgptTaskSync();
+    stopChatgptTaskSync = null;
+  }
+  if (speechSession) {
+    speechSession.abort();
+    speechSession = null;
+  }
 
-    let notes = "";
-    let syncWarning = "";
-    console.log("[할일장] Firestore 데이터 불러오기 시작");
-    try {
-      notes = await loadFromFirestore(user.uid);
-      console.log("[할일장] Firestore 데이터 불러오기 성공");
-      rolloverIncompleteTasks();
-    } catch (e) {
-      console.error("[할일장] 데이터 불러오기 실패:", e);
-      syncWarning =
-        "저장 서버 연결이 막혀 있어요. 광고 차단 확장 프로그램을 꺼주세요.";
-    }
-    document.getElementById("notesArea").value = notes;
-
-    const syncNote = document.getElementById("syncNote");
-    if (syncNote) {
-      syncNote.textContent = syncWarning;
-      syncNote.hidden = !syncWarning;
-    }
-
-    currentDate = todayStr();
-    renderDate();
-    render();
-    renderWorklist();
-
-    console.log("[할일장] 화면 전환 실행");
-    overlay.hidden = true;
-    appRoot.hidden = false;
-    startDayWatcher();
-    subscribeChatgptTasks(user.uid);
-  } else {
-    if (stopChatgptTaskSync) {
-      stopChatgptTaskSync();
-      stopChatgptTaskSync = null;
-    }
-    if (speechSession) {
-      speechSession.abort();
-      speechSession = null;
-    }
+  if (!user) {
     currentUser = null;
     tasks = [];
     worklist = [];
     chatgptTasks = [];
     overlay.hidden = false;
-    appRoot.hidden = true;
+    if (errorArea) errorArea.hidden = true;
+    return;
   }
+
+  currentUser = user;
+  tasks = [];
+  worklist = [];
+  chatgptTasks = [];
+  document.getElementById("sidebarEmail").textContent = user.email || "";
+  overlay.hidden = false;
+
+  let notes;
+  try {
+    notes = await loadFromFirestore(user.uid);
+  } catch (error) {
+    // Keep the main UI closed. Do not render a blank editable list.
+    if (authGeneration !== generation || currentUser?.uid !== user.uid) return;
+    console.error("초기 데이터 읽기 실패. 저장/수정 잠금:", error);
+    saveBlocked = true;
+    setSyncWarning("기존 데이터를 불러오지 못해 모든 쓰기 작업을 잠갔습니다.");
+    if (errorArea) {
+      errorArea.textContent =
+        "기존 데이터를 안전하게 불러오지 못했습니다. 수정·저장은 차단됐습니다. 인터넷 연결을 확인하고 페이지를 새로고침해 주세요.";
+      errorArea.hidden = false;
+    }
+    return;
+  }
+  if (authGeneration !== generation || currentUser?.uid !== user.uid) return;
+
+  isDataReady = true;
+  if (errorArea) errorArea.hidden = true;
+  document.getElementById("notesArea").value = notes;
+  setSyncWarning("");
+
+  currentDate = todayStr();
+  renderDate();
+  render();
+  renderWorklist();
+  overlay.hidden = true;
+  appRoot.hidden = false;
+  startDayWatcher();
+  subscribeChatgptTasks(user.uid);
 });
