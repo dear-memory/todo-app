@@ -1,9 +1,12 @@
-name: Validate Haliljang voice input
+name: Validate Haliljang safety and voice input
 on:
   pull_request:
     paths:
       - 'index.html'
       - 'script.js'
+      - 'storage-safety.mjs'
+      - 'tests/**'
+      - 'backup/**'
       - 'bridge/**'
       - '.github/workflows/chatgpt-validation.yml'
   push:
@@ -12,6 +15,9 @@ on:
     paths:
       - 'index.html'
       - 'script.js'
+      - 'storage-safety.mjs'
+      - 'tests/**'
+      - 'backup/**'
       - 'bridge/**'
       - '.github/workflows/chatgpt-validation.yml'
 permissions:
@@ -27,6 +33,15 @@ jobs:
       - name: Syntax checks
         run: |
           node --check script.js
+          node --check storage-safety.mjs
           node --check bridge/parser.mjs
-      - name: Korean voice date/time parser tests (no Firestore writes)
-        run: node --test bridge/test/parser.test.cjs
+          node --check backup/backup.js
+      - name: Korean speech and safe-storage helper tests (no Firebase writes)
+        run: |
+          node --test bridge/test/parser.test.cjs
+          node --test tests/storage-safety.test.cjs
+      - name: Confirm backup page has no Firebase write methods
+        run: |
+          if grep -E '(setDoc|addDoc|updateDoc|deleteDoc|runTransaction|writeBatch)' backup/backup.js; then
+            echo "Backup page must not contain database write functions"; exit 1
+          fi
