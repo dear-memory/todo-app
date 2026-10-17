@@ -97,7 +97,8 @@ $("download").addEventListener("click", async () => {
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    // Let the browser finish starting the download before releasing the URL.
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
 
     status(
       "백업 파일 다운로드 요청 완료: " + fileName +
