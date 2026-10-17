@@ -12,12 +12,25 @@ const db = getFirestore(auth.app);
 const $ = (id) => document.getElementById(id);
 let busy = false;
 let loginUser = null;
+let preparedUrl = null;
+let preparedJson = "";
+
+function clearPreparedBackup() {
+  if (preparedUrl) URL.revokeObjectURL(preparedUrl);
+  preparedUrl = null;
+  preparedJson = "";
+  $("downloadReady").hidden = true;
+  $("directSave").removeAttribute("href");
+  $("backupJson").value = "";
+  $("backupJson").hidden = true;
+}
 
 function status(text) {
   $("notice").textContent = text;
 }
 
 onAuthStateChanged(auth, (user) => {
+  if (loginUser?.uid !== user?.uid) clearPreparedBackup();
   loginUser = user;
   $("login").hidden = Boolean(user);
   $("backup").hidden = !user;
@@ -36,6 +49,22 @@ $("loginForm").addEventListener("submit", async (event) => {
 });
 $("logout").addEventListener("click", () => signOut(auth));
 
+$("copyJson").addEventListener("click", async () => {
+  if (!preparedJson) return status("먼저 백업 파일 생성 버튼을 눌러 주세요.");
+  try {
+    await navigator.clipboard.writeText(preparedJson);
+    status("백업 JSON을 클립보드에 복사했습니다. 메모장에 붙여넣은 뒤 .json 파일로 저장하세요.");
+  } catch {
+    // Some embedded browsers block clipboard writes. Offer manual text selection.
+    const area = $("backupJson");
+    area.hidden = false;
+    area.value = preparedJson;
+    area.focus();
+    area.select();
+    status("자동 복사가 차단됐습니다. 선택된 내용을 Ctrl+C로 복사해 메모장에 붙여넣고 .json 파일로 저장하세요.");
+  }
+});
+
 function safeJson(obj) {
   return JSON.stringify(obj, null, 2);
 }
@@ -48,6 +77,7 @@ $("download").addEventListener("click", async () => {
   if (busy || !loginUser) return;
   busy = true;
   $("download").disabled = true;
+  clearPreparedBackup();
   const uid = loginUser.uid;
   try {
     status("기존 사용자 문서를 읽고 있습니다...");
@@ -87,21 +117,18 @@ $("download").addEventListener("click", async () => {
     const digest = await crypto.subtle.digest("SHA-256", bytes);
     const checksum = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, "0")).join("");
+    if (!loginUser || loginUser.uid !== uid) throw new Error("백업 중 로그인 계정이 바뀌었습니다. 다시 로그인한 뒤 실행해 주세요.");
     const blob = new Blob([contents], { type: "application/json;charset=utf-8" });
     const fileName = "haliljang-backup-" + new Date().toISOString().slice(0, 10)
       + "-" + uid.slice(0, 6) + ".json";
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    // Let the browser finish starting the download before releasing the URL.
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    preparedUrl = URL.createObjectURL(blob);
+    preparedJson = contents;
+    $("directSave").href = preparedUrl;
+    $("directSave").download = fileName;
+    $("downloadReady").hidden = false;
 
     status(
-      "백업 파일 다운로드 요청 완료: " + fileName +
+      "백업 데이터 읽기 완료 — 아래 'JSON 백업 파일 직접 다운로드' 링크를 눌러 저장하세요: " + fileName +
       "\n기존 할 일: " + (userData.tasks?.length ?? 0) + "개" +
       " / 작업 목록: " + (userData.worklist?.length ?? 0) + "개" +
       " / 메모: " + (userData.notes?.length ?? 0) + "글자" +
@@ -109,7 +136,7 @@ $("download").addEventListener("click", async () => {
       " / 음성 할 일: " + chatgptTasks.length + "개" +
       (optionalWarning ? "\n참고: " + optionalWarning : "") +
       "\nSHA-256: " + checksum +
-      "\n다운로드 폴더에 파일이 실제 생성됐는지 확인하고 별도 공간에도 복사해 주세요."
+      "\n다운로드 링크를 누른 후 실제 파일이 생성됐는지 확인하세요. 파일이 없으면 아직 백업 완료가 아닙니다."
     );
   } catch (error) {
     console.error("읽기 전용 백업 실패:", error.code || error.message);
