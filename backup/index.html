@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>할일장 · 읽기 전용 데이터 백업</title>
+<style>
+*{box-sizing:border-box}body{font:16px/1.55 system-ui,"Noto Sans KR",sans-serif;margin:0;background:#f8fafc;color:#14213d}
+main{max-width:570px;margin:3em auto;padding:1.5em}section{background:white;border:1px solid #e6e9ef;border-radius:16px;padding:1.5em;margin:1em 0}
+h1{font-size:1.65em}h2{font-size:1.15em}p{margin:.6em 0}label{display:block;font-weight:600;margin-top:1em}
+input{padding:12px;border:1px solid #cbd2dd;border-radius:8px;width:100%;font:inherit}
+button{padding:12px 18px;border:0;background:#14213d;color:white;border-radius:8px;font:inherit;margin-top:1em;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}.muted{color:#667085;font-size:.9em}.danger{background:#fff6ea;border-left:4px solid #de8d21;padding:12px}
+#notice{white-space:pre-wrap;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+<h1>할일장 · 안전 백업</h1>
+<p class="danger">이 페이지는 Firebase 데이터를 <strong>읽기만</strong> 합니다. 할 일, 메모, 예약, 보안 규칙을 변경하거나 삭제하지 않습니다.</p>
+<section id="login">
+  <h2>기존 할일장 계정 로그인</h2>
+  <p class="muted">기존 할일장에서 사용하는 Firebase 계정으로 로그인하세요. 비밀번호는 Firebase Authentication으로만 전송됩니다.</p>
+  <form id="loginForm">
+    <label for="email">이메일</label><input type="email" id="email" required autocomplete="email">
+    <label for="password">비밀번호</label><input type="password" id="password" required autocomplete="current-password">
+    <button type="submit">로그인</button>
+  </form>
+</section>
+<section id="backup" hidden>
+<h2>읽기 전용 JSON 백업</h2>
+<p>현재 로그인 계정: <strong id="account"></strong></p>
+<p class="muted">원본 사용자 문서(tasks·worklist·notes)와 bookings·chatgptTasks 하위 컬렉션을 내려받습니다. 데이터는 브라우저에서 파일로 만들어지며 별도 서버로 전송하지 않습니다.</p>
+<button type="button" id="download">기존 내용 백업 파일 다운로드</button>
+<button type="button" id="logout">로그아웃</button>
+</section>
+<section>
+<h2>백업 상태</h2>
+<p id="notice" role="status" aria-live="polite">먼저 기존 계정으로 로그인하세요.</p>
+<p class="muted">백업 JSON에는 개인 일정과 메모가 들어 있습니다. 안전하게 보관하고 공개 저장소나 채팅에 업로드하지 마세요.</p>
+</section>
+</main>
+<script type="module" src="./backup.js"></script>
+</body></html>
