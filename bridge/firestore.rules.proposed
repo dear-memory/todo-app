@@ -1,0 +1,44 @@
+// DRAFT ONLY — DO NOT DEPLOY WITHOUT COMPARING TO LIVE RULES.
+// Existing rules were transcribed from the user's 2026-10-17 Firebase screenshot.
+// The two existing matches below must not be weakened, removed, or overwritten.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{uid}/bookings/{fileId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // New, isolated voice/ChatGPT tasks. Does NOT touch parent user document.
+    match /users/{uid}/chatgptTasks/{taskId} {
+      allow read, update, delete: if request.auth != null
+        && request.auth.uid == uid;
+
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'title', 'date', 'time', 'category', 'detail', 'done', 'source', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'title', 'date', 'time', 'category', 'detail', 'done', 'source', 'createdAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.date is string
+        && request.resource.data.date.size() == 10
+        && (request.resource.data.time == null ||
+            (request.resource.data.time is string &&
+             request.resource.data.time.size() == 5))
+        && request.resource.data.category in ['업무','개인','운동','개인성장']
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() <= 2000
+        && request.resource.data.done == false
+        && request.resource.data.source == 'chatgpt'
+        && request.resource.data.createdAt is timestamp;
+    }
+  }
+}
