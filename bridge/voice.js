@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { parseSpoken, seoulToday } from "./parser.mjs";
 
 const firebaseConfig = {
@@ -8,12 +9,15 @@ const firebaseConfig = {
   projectId: "mkstroy-3dc7e",
   appId: "1:1041941827601:web:4004c163fdd00586afa1b0",
 };
-const auth = getAuth(initializeApp(firebaseConfig));
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 const el = (id) => document.getElementById(id);
 let loggedInUser = null;
 let busy = false;
 let requestKey = null;
 let recognition = null;
+let stopTaskWatcher = null;
 
 function notice(message) { el("notice").textContent = message; }
 function setBusy(value) {
@@ -47,11 +51,44 @@ el("loginForm").addEventListener("submit", async (event) => {
 });
 el("logoutBtn").addEventListener("click", () => signOut(auth));
 onAuthStateChanged(auth, (user) => {
+  if (stopTaskWatcher) {
+    stopTaskWatcher();
+    stopTaskWatcher = null;
+  }
   loggedInUser = user;
   el("loginSection").classList.toggle("hidden", Boolean(user));
   el("voiceSection").classList.toggle("hidden", !user);
   el("loggedInAs").textContent = user?.email || "";
-  if (user) notice("음성으로 할 일을 말해 주세요. 기존 기록은 그대로 유지됩니다.");
+  el("recentTasks").replaceChildren();
+  if (user) {
+    notice("음성으로 할 일을 말해 주세요. 기존 기록은 그대로 유지됩니다.");
+    stopTaskWatcher = onSnapshot(
+      collection(db, "users", user.uid, "chatgptTasks"),
+      (snapshot) => {
+        if (loggedInUser?.uid !== user.uid) return;
+        const entries = snapshot.docs.map((item) => item.data())
+          .sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 30);
+        const list = el("recentTasks");
+        list.replaceChildren();
+        if (entries.length === 0) {
+          const empty = document.createElement("li");
+          empty.textContent = "아직 새로 추가된 할 일이 없습니다.";
+          list.appendChild(empty);
+        }
+        for (const task of entries) {
+          const li = document.createElement("li");
+          li.textContent = (task.date || "날짜 없음") + " " + (task.time || "") + " · " + (task.title || "");
+          li.style.marginBottom = "7px";
+          list.appendChild(li);
+        }
+      },
+      () => {
+        const li = document.createElement("li");
+        li.textContent = "목록 접근 권한을 확인해 주세요.";
+        el("recentTasks").replaceChildren(li);
+      }
+    );
+  }
 });
 
 el("transcript").addEventListener("input", () => { newRequest(); applyTranscript(); });
