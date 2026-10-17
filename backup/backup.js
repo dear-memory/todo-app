@@ -61,9 +61,18 @@ $("download").addEventListener("click", async () => {
     }
     status("하위 컬렉션까지 모두 읽고 있습니다...");
     const bookings = await subcollection(uid, "bookings");
-    const chatgptTasks = await subcollection(uid, "chatgptTasks");
+    // New voice tasks are not readable before their separate rules are added.
+    // That must not block backing up existing tasks, worklist, notes and bookings.
+    let chatgptTasks = [];
+    let optionalWarning = null;
+    try {
+      chatgptTasks = await subcollection(uid, "chatgptTasks");
+    } catch (error) {
+      if (error.code !== "permission-denied") throw error;
+      optionalWarning = "새 음성 할 일은 아직 접근 권한이 없어 이번 백업에 포함되지 않았습니다.";
+    }
 
-    // All content stays within the browser. No POST, setDoc, updateDoc, or deleteDoc.
+    // All data stays in this browser and is saved as a local download.
     const backup = {
       format: "haliljang-firestore-readonly-backup-v1",
       projectId: firebaseConfig.projectId,
@@ -71,6 +80,7 @@ $("download").addEventListener("click", async () => {
       exportedAt: new Date().toISOString(),
       userDocument: userData,
       subcollections: { bookings, chatgptTasks },
+      warnings: optionalWarning ? [optionalWarning] : [],
     };
     const contents = safeJson(backup);
     const bytes = new TextEncoder().encode(contents);
@@ -96,6 +106,7 @@ $("download").addEventListener("click", async () => {
       " / 메모: " + (userData.notes?.length ?? 0) + "글자" +
       " / 예약: " + bookings.length + "개" +
       " / 음성 할 일: " + chatgptTasks.length + "개" +
+      (optionalWarning ? "\n참고: " + optionalWarning : "") +
       "\nSHA-256: " + checksum +
       "\n다운로드 폴더에 파일이 실제 생성됐는지 확인하고 별도 공간에도 복사해 주세요."
     );
