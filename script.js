@@ -846,6 +846,12 @@ async function saveRecognizedTask(spoken, uid) {
     voiceNotice("제목과 날짜를 인식하지 못했습니다. 다시 말해 주세요.");
     return;
   }
+  // '3시'처럼 오전/오후가 없는 표현은 잘못된 시간에 저장하지 않습니다.
+  if (newTask.time && !/(오전|오후)/.test(spoken) &&
+      /\d{1,2}시/.test(spoken) && Number(newTask.time.slice(0, 2)) <= 12) {
+    voiceNotice("오전·오후가 구분되지 않아 저장하지 않았습니다. '오늘 오후 3시 약속 추가해 줘'처럼 다시 말씀해 주세요.");
+    return;
+  }
   newTask.category = selectedCategory;
   voiceSaving = true;
   document.getElementById("voiceAddBtn").disabled = true;
