@@ -1,6 +1,6 @@
 import { firebaseConfig } from "./app-config.js";
 import { parseSpoken } from "./bridge/parser.mjs";
-import { stateSignature, validUserDocument } from "./storage-safety.mjs";
+import { stateSignature, validUserDocument } from "./storage-safety.mjs?v=2";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -74,6 +74,7 @@ let loadedSignature = null;
 let lastLoadedTime = null;
 let saving = false;
 let pendingChanges = 0;
+let savedRevision = 0;
 let authGeneration = 0;
 
 // ---------- Firestore 안전 동기화 ----------
@@ -92,6 +93,7 @@ function scheduleSave() {
     return;
   }
   pendingChanges++;
+  setSyncWarning("저장 중...");
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveToFirestore, 500);
 }
@@ -136,7 +138,8 @@ async function saveToFirestore() {
       notes: snapshotNotes, updatedAt: nextUpdatedAt,
     });
     lastLoadedTime = nextUpdatedAt;
-    setSyncWarning("");
+    savedRevision = currentRevision;
+    setSyncWarning(pendingChanges > savedRevision ? "저장 중..." : "저장 완료");
   } catch (error) {
     if (authGeneration !== generation) return;
     console.error("안전 저장 차단:", error);
@@ -981,6 +984,14 @@ function setupVoiceAdd() {
   });
 }
 
+// Warn before leaving while debounced, in-flight, or blocked edits are unsaved.
+window.addEventListener("beforeunload", (event) => {
+  if (currentUser && pendingChanges > savedRevision) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+});
+
 // ---------- 초기화 ----------
 
 setupForm();
@@ -999,6 +1010,7 @@ onAuthStateChanged(auth, async (user) => {
   loadedSignature = null;
   lastLoadedTime = null;
   pendingChanges = 0;
+  savedRevision = 0;
 
   const overlay = document.getElementById("authOverlay");
   const appRoot = document.getElementById("appRoot");
