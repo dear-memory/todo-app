@@ -60,6 +60,10 @@
     <label for="category">카테고리</label>
     <select id="category"><option>업무</option><option>개인</option><option>운동</option><option>개인성장</option></select>
     <button type="button" id="saveBtn" style="width:100%;margin-top:18px">새 할 일 저장</button>
+    <hr style="border:0;border-top:1px solid #eaecf0;margin:24px 0">
+    <h3 style="margin-bottom:8px">이 페이지에서 추가된 할 일</h3>
+    <p class="muted">기존 기록을 수정하지 않고 새로 추가된 항목만 표시합니다.</p>
+    <ul id="recentTasks" aria-live="polite" style="padding-left:22px"></ul>
   </section>
 
   <p id="notice" role="status" aria-live="polite">기존 할일장 자료는 수정되지 않습니다.</p>
