@@ -1,0 +1,39 @@
+name: Haliljang voice safety release
+on:
+  pull_request:
+    paths:
+      - 'script.js'
+      - 'index.html'
+      - 'storage-safety.mjs'
+      - 'bridge/**'
+      - 'tests/**'
+      - '.github/workflows/haliljang-voice-safety.yml'
+  push:
+    branches:
+      - 'release/voice-safe-after-backup-20261017'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JS syntax
+        run: |
+          node --check script.js
+          node --check storage-safety.mjs
+          node --check bridge/parser.mjs
+      - name: Test voice parsing and state integrity
+        run: |
+          node --test bridge/test/parser.test.cjs
+          node --test tests/storage-safety.test.cjs
+      - name: Reject destructive whole-document writes
+        run: |
+          if grep -E 'setDoc\(' script.js; then
+            echo "Unsafe setDoc is forbidden"; exit 1
+          fi
+          grep -q 'runTransaction' script.js
+          grep -q 'getDocFromServer' script.js
