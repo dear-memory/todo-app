@@ -13,7 +13,7 @@ import {
 import {
   getFirestore,
   doc,
-  getDoc,
+  getDocFromServer,
   runTransaction,
   collection,
   onSnapshot,
@@ -154,7 +154,8 @@ async function saveToFirestore() {
 async function loadFromFirestore(uid) {
   // A real document is required; a missing/denied/offline read must never be
   // interpreted as an empty account and then saved over existing records.
-  const snap = await withTimeout(getDoc(doc(db, "users", uid)), 12000);
+  // Never trust a possibly stale cached copy as the baseline for future writes.
+  const snap = await withTimeout(getDocFromServer(doc(db, "users", uid)), 12000);
   if (!snap.exists()) throw new Error("user_document_missing");
   const data = snap.data();
   if (!validUserDocument(data)) throw new Error("invalid_user_document");
