@@ -1,0 +1,33 @@
+name: Validate read-only backup page
+on:
+  pull_request:
+    paths:
+      - 'backup/**'
+      - '.github/workflows/backup-readonly.yml'
+  push:
+    branches:
+      - 'feature/read-only-firestore-backup-20261017'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check backup/backup.js
+      - name: Enforce no Firestore writes in backup JS
+        run: |
+          if grep -E '(setDoc|addDoc|updateDoc|deleteDoc|runTransaction|writeBatch|batch\.commit)' backup/backup.js; then
+            echo "Write API is forbidden in read-only backup page"; exit 1
+          fi
+      - name: Ensure no original app assets are modified
+        run: |
+          git diff --name-only origin/main...HEAD | while read path; do
+            case "$path" in backup/*|.github/workflows/backup-readonly.yml) ;; *) echo "Unexpected file: $path"; exit 1;; esac
+          done
