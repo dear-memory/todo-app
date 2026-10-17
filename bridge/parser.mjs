@@ -2,10 +2,7 @@
 const DAY = 86400000;
 
 function seoulToday(now = new Date()) {
-  const s = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(now);
-  // en-CA typically yields YYYY-MM-DD, but make this deterministic across engines.
+  // Extract calendar parts in Korea even when the caller is in a different timezone.
   const fields = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
   }).formatToParts(now);
@@ -25,9 +22,9 @@ function parseSpoken(text, now = new Date()) {
 
   let date = seoulToday(now);
   const start = date;
-  const fullDate = title.match(/(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-  const monthDay = !fullDate && title.match(/(\d{1,2})월\s*(\d{1,2})일/);
-  const relative = title.match(/(오늘|내일|모레|글피)/);
+  const fullDate = title.match(/(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일(?:에)?/);
+  const monthDay = !fullDate && title.match(/(\d{1,2})월\s*(\d{1,2})일(?:에)?/);
+  const relative = title.match(/(오늘|내일|모레|글피)(?:에)?/);
   let dateExpr = null;
   if (fullDate || monthDay) {
     dateExpr = fullDate || monthDay;
@@ -47,7 +44,7 @@ function parseSpoken(text, now = new Date()) {
   }
 
   let time = null;
-  const timeExpr = title.match(/(오전|오후)?\s*(\d{1,2})시\s*(?:(반)|(\d{1,2})분)?/);
+  const timeExpr = title.match(/(오전|오후)?\s*(\d{1,2})시\s*(?:(반)|(\d{1,2})분)?(?:에)?/);
   if (timeExpr) {
     const hour = Number(timeExpr[2]), minute = timeExpr[3] ? 30 : Number(timeExpr[4] || 0);
     if (hour > 23 || minute > 59 || (timeExpr[1] && (hour < 1 || hour > 12))) {
