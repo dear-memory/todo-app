@@ -1,14 +1,16 @@
-name: Validate ChatGPT task integration
+name: Validate isolated voice bridge and ChatGPT prep
 on:
   pull_request:
     paths:
       - 'functions/**'
+      - 'bridge/**'
       - '.github/workflows/chatgpt-validation.yml'
   push:
     branches:
       - 'feature/chatgpt-voice-safe-integration'
     paths:
       - 'functions/**'
+      - 'bridge/**'
       - '.github/workflows/chatgpt-validation.yml'
 permissions:
   contents: read
@@ -24,5 +26,11 @@ jobs:
         run: |
           node --check functions/validation.js
           node --check functions/index.js
-      - name: Validate task inputs
+          node --check bridge/lib/validation.js
+          node --check bridge/api/tasks.js
+          node --check bridge/parser.mjs
+          node --check bridge/voice.js
+      - name: Original validation tests
         run: node --test functions/test/validation.test.js
+      - name: Voice bridge tests with fully mocked Firebase responses
+        run: node --test bridge/test/*.test.cjs
