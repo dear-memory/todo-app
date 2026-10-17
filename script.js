@@ -13,6 +13,10 @@ import {
   doc,
   getDoc,
   setDoc,
+  collection,
+  onSnapshot,
+  updateDoc,
+  deleteDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
@@ -54,6 +58,9 @@ let currentDate = todayStr();
 let currentUser = null;
 let tasks = [];
 let worklist = [];
+// ChatGPT 항목은 별도의 하위 컬렉션에 보관하며 기존 tasks 배열은 건드리지 않습니다.
+let chatgptTasks = [];
+let stopChatgptTaskSync = null;
 let expandedIds = new Set();
 let selectedCategory = "업무";
 let saveTimer = null;
@@ -108,6 +115,53 @@ async function loadFromFirestore(uid) {
   return "";
 }
 
+// ---------- ChatGPT 전용 하위 컬렉션 (기존 사용자 문서 불변) ----------
+
+function subscribeChatgptTasks(uid) {
+  if (stopChatgptTaskSync) stopChatgptTaskSync();
+  stopChatgptTaskSync = onSnapshot(
+    collection(db, "users", uid, "chatgptTasks"),
+    (snap) => {
+      if (currentUser?.uid !== uid) return;
+      chatgptTasks = snap.docs.map((entry) => ({
+        ...entry.data(),
+        id: entry.id,
+        _chatgpt: true,
+      }));
+      render();
+      if (!document.getElementById("view-week").hidden) renderWeek();
+    },
+    (error) => {
+      console.error("ChatGPT 할 일 동기화 실패:", error);
+      const note = document.getElementById("syncNote");
+      if (note) {
+        note.textContent = "ChatGPT 추가 항목을 불러오지 못했습니다. 연결을 확인해주세요.";
+        note.hidden = false;
+      }
+    }
+  );
+}
+
+async function updateChatgptTask(id, changes) {
+  if (!currentUser) return;
+  try {
+    await updateDoc(doc(db, "users", currentUser.uid, "chatgptTasks", id), changes);
+  } catch (error) {
+    console.error("ChatGPT 할 일 수정 실패:", error);
+    alert("수정에 실패했습니다. 잠시 후 다시 시도해주세요.");
+  }
+}
+
+async function deleteChatgptTask(id) {
+  if (!currentUser) return;
+  try {
+    await deleteDoc(doc(db, "users", currentUser.uid, "chatgptTasks", id));
+  } catch (error) {
+    console.error("ChatGPT 할 일 삭제 실패:", error);
+    alert("삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+  }
+}
+
 // ---------- 날짜/할 일 (오늘 화면) ----------
 
 function periodOf(time) {
@@ -153,7 +207,7 @@ function render() {
   const emptyState = document.getElementById("emptyState");
   container.innerHTML = "";
 
-  const dayTasks = tasks.filter((t) => t.date === currentDate);
+  const dayTasks = [...tasks, ...chatgptTasks].filter((t) => t.date === currentDate);
 
   if (dayTasks.length === 0) {
     emptyState.hidden = false;
@@ -215,7 +269,8 @@ function renderTaskItem(task) {
     textarea.value = task.detail || "";
     textarea.addEventListener("input", () => {
       task.detail = textarea.value;
-      scheduleSave();
+      if (task._chatgpt) updateChatgptTask(task.id, { detail: task.detail });
+      else scheduleSave();
     });
     detail.appendChild(textarea);
     wrapper.appendChild(detail);
@@ -235,7 +290,8 @@ function renderTaskItem(task) {
         e.stopPropagation();
         task.category = cat;
         categoryMenuTaskId = null;
-        scheduleSave();
+        if (task._chatgpt) updateChatgptTask(task.id, { category: cat });
+        else scheduleSave();
         render();
       });
       menu.appendChild(opt);
@@ -321,12 +377,22 @@ function toggleExpanded(id) {
 
 function toggleDone(id) {
   const task = tasks.find((t) => t.id === id);
-  if (task) task.done = !task.done;
-  scheduleSave();
-  render();
+  if (task) {
+    task.done = !task.done;
+    scheduleSave();
+    render();
+    return;
+  }
+  const chatgptTask = chatgptTasks.find((t) => t.id === id);
+  if (chatgptTask) updateChatgptTask(id, { done: !chatgptTask.done });
 }
 
 function deleteTask(id) {
+  const chatgptTask = chatgptTasks.find((t) => t.id === id);
+  if (chatgptTask) {
+    deleteChatgptTask(id);
+    return;
+  }
   tasks = tasks.filter((t) => t.id !== id);
   scheduleSave();
   render();
@@ -482,7 +548,7 @@ function renderWeek() {
 
   weekDates.forEach((dateStr, i) => {
     const [, m, d] = dateStr.split("-").map(Number);
-    const dayTasks = tasks
+    const dayTasks = [...tasks, ...chatgptTasks]
       .filter((t) => t.date === dateStr)
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
 
@@ -791,10 +857,16 @@ onAuthStateChanged(auth, async (user) => {
     overlay.hidden = true;
     appRoot.hidden = false;
     startDayWatcher();
+    subscribeChatgptTasks(user.uid);
   } else {
+    if (stopChatgptTaskSync) {
+      stopChatgptTaskSync();
+      stopChatgptTaskSync = null;
+    }
     currentUser = null;
     tasks = [];
     worklist = [];
+    chatgptTasks = [];
     overlay.hidden = false;
     appRoot.hidden = true;
   }
