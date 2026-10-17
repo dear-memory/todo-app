@@ -30,3 +30,19 @@ test("rejects empty tasks", async () => {
   const { parseSpoken } = await import("../parser.mjs");
   assert.throws(() => parseSpoken("", now));
 });
+
+test("Korean voice: postpositions after dates and times are removed", async () => {
+  const { parseSpoken } = await import("../parser.mjs");
+  const result = parseSpoken("할일장에 오늘 오후 3시에 강남에서 약속 저장해 줘", now);
+  assert.deepEqual(result, {
+    title: "강남에서 약속", date: "2026-10-17", time: "15:00", category: "업무", detail: "",
+  });
+});
+
+test("Korean voice: tomorrow at 3 with particle", async () => {
+  const { parseSpoken } = await import("../parser.mjs");
+  const result = parseSpoken("내일 3시에 약속 저장해줘", now);
+  assert.equal(result.title, "약속");
+  assert.equal(result.date, "2026-10-18");
+  assert.equal(result.time, "03:00");
+});
