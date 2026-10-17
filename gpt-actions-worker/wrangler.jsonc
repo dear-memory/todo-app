@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "haliljang-chatgpt-free",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-17",
+  "workers_dev": true,
+  "secrets": {
+    "required": [
+      "GPT_ACTION_KEY",
+      "FIREBASE_BOT_EMAIL",
+      "FIREBASE_BOT_PASSWORD",
+      "FIREBASE_BOT_UID",
+      "FIREBASE_TARGET_UID"
+    ]
+  }
+}
