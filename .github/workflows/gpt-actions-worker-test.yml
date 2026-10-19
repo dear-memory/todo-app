@@ -1,0 +1,28 @@
+name: Validate free GPT Actions create-only bridge
+on:
+  push:
+    branches:
+      - feature/chatgpt-direct-gpt-actions-free-worker-20261017
+  pull_request:
+    paths:
+      - 'gpt-actions-worker/**'
+      - '.github/workflows/gpt-actions-worker-test.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Worker syntax
+        run: node --check gpt-actions-worker/src/index.mjs
+      - name: Test mocked Firebase writes
+        run: node --test gpt-actions-worker/test/index.test.mjs
+      - name: Confirm no full-document or destructive actions
+        run: |
+          if grep -E 'setDoc\(|updateDoc\(|deleteDoc\(|deleteDocument|patchDocument|/bookings/' gpt-actions-worker/src/index.mjs | grep -v '^//'; then
+            echo 'Unexpected action in create-only bridge'; exit 1
+          fi

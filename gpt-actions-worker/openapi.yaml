@@ -1,0 +1,104 @@
+openapi: 3.1.0
+info:
+  title: 할일장 새 할 일 추가
+  version: 1.0.0
+  description: 기존 할 일과 메모를 읽거나 수정하지 않고 새 할 일만 추가합니다.
+servers:
+  - url: https://REPLACE_WITH_YOUR_CLOUDFLARE_WORKER.workers.dev
+paths:
+  /tasks:
+    post:
+      operationId: createHaliljangTask
+      summary: 할일장에 새로운 할 일 한 개를 저장합니다
+      description: |
+        사용자가 요청한 경우에만 호출합니다.
+        제목과 날짜는 필수입니다. 시간은 없으면 null로 전달합니다.
+        서버가 저장 성공을 확인하기 전에는 사용자에게 저장 완료라고 답하면 안 됩니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - title
+                - date
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 160
+                  description: 일정 또는 할 일 제목. 예) 강남에서 약속
+                date:
+                  type: string
+                  format: date
+                  description: Asia/Seoul 달력 기준 YYYY-MM-DD 날짜. 예) 2026-10-18
+                time:
+                  type:
+                    - string
+                    - "null"
+                  pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+                  description: 24시간제 HH:mm. 예) 15:00. 시간이 없으면 null.
+                category:
+                  type: string
+                  enum:
+                    - 업무
+                    - 개인
+                    - 운동
+                    - 개인성장
+                  default: 개인
+                detail:
+                  type: string
+                  maxLength: 2000
+                  default: ""
+                requestId:
+                  type: string
+                  description: |
+                    중복 저장 방지용 고유 요청 ID. 동일한 저장 요청을 재시도하면 이전 ID를 그대로 사용합니다.
+                    새 요청이면 새 UUID를 생성해 전달합니다.
+                  minLength: 8
+                  maxLength: 128
+      responses:
+        "201":
+          description: 새 할 일이 실제로 저장됨
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResult"
+        "200":
+          description: 같은 requestId의 할 일이 이미 저장됨 (중복 방지)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResult"
+        "400":
+          description: 요청 내용 오류
+        "401":
+          description: API 인증 실패
+        "403":
+          description: Firestore에서 권한 거부
+        "502":
+          description: Firestore 저장 실패
+        "503":
+          description: 임시 장애 또는 서버 미설정
+components:
+  schemas:
+    TaskResult:
+      type: object
+      properties:
+        saved:
+          type: boolean
+        alreadySaved:
+          type: boolean
+        taskId:
+          type: string
+        title:
+          type: string
+        date:
+          type: string
+          format: date
+        time:
+          type:
+            - string
+            - "null"
