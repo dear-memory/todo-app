@@ -1,6 +1,7 @@
 import { firebaseConfig } from "./app-config.js";
 import { parseSpoken } from "./bridge/parser.mjs";
 import { stateSignature, validUserDocument } from "./storage-safety.mjs?v=2";
+import { tasksForDate, taskOriginDate } from "./carryover.mjs?v=1";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -268,7 +269,7 @@ function render() {
   const emptyState = document.getElementById("emptyState");
   container.innerHTML = "";
 
-  const dayTasks = [...tasks, ...chatgptTasks].filter((t) => t.date === currentDate);
+  const dayTasks = tasksForDate([...tasks, ...chatgptTasks], currentDate, todayStr());
 
   if (dayTasks.length === 0) {
     emptyState.hidden = false;
@@ -386,11 +387,12 @@ function renderTaskRow(task, isExpanded) {
   title.addEventListener("click", () => toggleExpanded(task.id));
   row.appendChild(title);
 
-  if (task.rolledFrom) {
+  const originDate = taskOriginDate(task, currentDate, todayStr());
+  if (originDate) {
     const rolled = document.createElement("span");
     rolled.className = "task-rolled-tag";
-    rolled.title = `${formatShortDate(task.rolledFrom)}에 등록된 할 일이 이월됐어요`;
-    rolled.textContent = `${formatShortDate(task.rolledFrom)}부터`;
+    rolled.title = `${formatShortDate(originDate)}에 등록된 미완료 할 일을 오늘도 표시하고 있어요`;
+    rolled.textContent = `${formatShortDate(originDate)}부터`;
     row.appendChild(rolled);
   }
 
@@ -598,8 +600,7 @@ function renderWeek() {
 
   weekDates.forEach((dateStr, i) => {
     const [, m, d] = dateStr.split("-").map(Number);
-    const dayTasks = [...tasks, ...chatgptTasks]
-      .filter((t) => t.date === dateStr)
+    const dayTasks = tasksForDate([...tasks, ...chatgptTasks], dateStr, today)
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
 
     const col = document.createElement("div");
@@ -643,10 +644,11 @@ function renderWeek() {
         title.textContent = task.title;
         row.appendChild(title);
 
-        if (task.rolledFrom) {
+        const originDate = taskOriginDate(task, dateStr, today);
+        if (originDate) {
           const rolled = document.createElement("span");
           rolled.className = "task-rolled-tag";
-          rolled.textContent = ` ${formatShortDate(task.rolledFrom)}부터`;
+          rolled.textContent = ` ${formatShortDate(originDate)}부터`;
           row.appendChild(rolled);
         }
 
