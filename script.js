@@ -1,7 +1,7 @@
 import { firebaseConfig } from "./app-config.js";
 import { parseSpoken } from "./bridge/parser.mjs";
 import { stateSignature, validUserDocument } from "./storage-safety.mjs?v=2";
-import { tasksForDate, taskOriginDate } from "./carryover.mjs?v=1";
+import { tasksForDate, taskOriginDate } from "./carryover.mjs?v=2";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
@@ -391,7 +391,9 @@ function renderTaskRow(task, isExpanded) {
   if (originDate) {
     const rolled = document.createElement("span");
     rolled.className = "task-rolled-tag";
-    rolled.title = `${formatShortDate(originDate)}에 등록된 미완료 할 일을 오늘도 표시하고 있어요`;
+    rolled.title = task.done
+      ? `${formatShortDate(originDate)}에 등록된 할 일을 완료 처리한 날짜에도 표시하고 있어요`
+      : `${formatShortDate(originDate)}에 등록된 미완료 할 일을 오늘도 표시하고 있어요`;
     rolled.textContent = `${formatShortDate(originDate)}부터`;
     row.appendChild(rolled);
   }
@@ -442,12 +444,17 @@ function toggleDone(id) {
   const task = tasks.find((t) => t.id === id);
   if (task) {
     task.done = !task.done;
+    if (task.done) task.completedOn = todayStr();
+    else delete task.completedOn;
     scheduleSave();
     render();
     return;
   }
   const chatgptTask = chatgptTasks.find((t) => t.id === id);
-  if (chatgptTask) updateChatgptTask(id, { done: !chatgptTask.done });
+  if (chatgptTask) {
+    const done = !chatgptTask.done;
+    updateChatgptTask(id, { done, completedOn: done ? todayStr() : null });
+  }
 }
 
 function deleteTask(id) {
