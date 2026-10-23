@@ -939,6 +939,31 @@ async function saveRecognizedTask(spoken, uid) {
 function setupVoiceAdd() {
   const button = document.getElementById("voiceAddBtn");
   if (!button) return;
+
+  // Native Android wrapper uses the device speech-recognition service.
+  // The web/PWA browser path below remains unchanged.
+  if (window.HaliljangNative && typeof window.HaliljangNative.startSpeech === "function") {
+    button.addEventListener("click", () => {
+      if (voiceSaving) return;
+      if (!currentUser || !isDataReady) {
+        voiceNotice("먼저 할일장 계정으로 로그인해 주세요.");
+        return;
+      }
+      button.textContent = "🎙️ 음성 인식 열기...";
+      window.HaliljangNative.startSpeech();
+    });
+    document.addEventListener("haliljang-native-speech", async (event) => {
+      const spoken = String(event.detail?.text || "").trim();
+      button.textContent = "🎙️ 말해서 바로 저장";
+      if (!spoken || !currentUser || !isDataReady) return;
+      await saveRecognizedTask(spoken, currentUser.uid);
+    });
+    document.addEventListener("haliljang-native-speech-error", (event) => {
+      button.textContent = "🎙️ 말해서 바로 저장";
+      if (event.detail?.message) voiceNotice(event.detail.message);
+    });
+    return;
+  }
   if (!SpeechCapture) {
     button.disabled = true;
     voiceNotice("현재 브라우저는 음성 인식을 지원하지 않습니다. Chrome 등을 사용해 주세요.");
