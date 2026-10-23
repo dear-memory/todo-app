@@ -679,8 +679,7 @@ function setupNav() {
 
   navItems.forEach((item) => {
     item.addEventListener("click", () => {
-      navItems.forEach((i) => i.classList.remove("active"));
-      item.classList.add("active");
+      navItems.forEach((i) => i.classList.toggle("active", i.dataset.view === item.dataset.view));
 
       const target = item.dataset.view;
       Object.keys(views).forEach((key) => {
